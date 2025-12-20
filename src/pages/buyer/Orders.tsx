@@ -1,9 +1,24 @@
 import { Link } from 'react-router-dom';
-import { ClipboardList, Package, Clock, CheckCircle, Truck, CreditCard, XCircle, RotateCcw, AlertCircle, ChevronRight, RefreshCw } from 'lucide-react';
+import { 
+  ClipboardList, 
+  Package, 
+  Clock, 
+  CheckCircle, 
+  Truck, 
+  CreditCard, 
+  XCircle, 
+  RotateCcw, 
+  AlertCircle, 
+  ChevronRight, 
+  RefreshCw,
+  Upload,
+  AlertTriangle
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { BuyerLayout } from '@/components/buyer/BuyerLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,7 +55,8 @@ export default function Orders() {
           status,
           total,
           created_at,
-          order_items (id, product_name, quantity)
+          order_items (id, product_name, quantity),
+          payment_confirmations (id, is_confirmed)
         `)
         .eq('buyer_id', profileId)
         .order('created_at', { ascending: false });
@@ -74,13 +90,84 @@ export default function Orders() {
   };
 
   // Group orders by status
-  const activeOrders = orders?.filter(o => 
-    ['new', 'waiting_payment', 'paid', 'assigned', 'picked_up', 'on_delivery'].includes(o.status)
+  const unpaidOrders = orders?.filter(o => 
+    (o.status === 'new' || o.status === 'waiting_payment') && 
+    (!o.payment_confirmations || o.payment_confirmations.length === 0)
+  ) || [];
+  
+  const processingOrders = orders?.filter(o => 
+    ['paid', 'assigned', 'picked_up', 'on_delivery'].includes(o.status) ||
+    ((o.status === 'new' || o.status === 'waiting_payment') && o.payment_confirmations && o.payment_confirmations.length > 0)
   ) || [];
   
   const completedOrders = orders?.filter(o => 
     ['delivered', 'cancelled', 'refunded', 'failed', 'returned'].includes(o.status)
   ) || [];
+
+  const OrderCard = ({ order, index, showPaymentAction = false }: { order: any; index: number; showPaymentAction?: boolean }) => {
+    const status = statusConfig[order.status] || statusConfig.new;
+    const StatusIcon = status.icon;
+    const hasPayment = order.payment_confirmations && order.payment_confirmations.length > 0;
+
+    return (
+      <div 
+        className="block animate-fade-in"
+        style={{ animationDelay: `${index * 50}ms` }}
+      >
+        <Card className={cn(
+          "hover:shadow-md transition-all hover:border-primary/30 overflow-hidden",
+          showPaymentAction && "border-amber-300 bg-amber-50/30"
+        )}>
+          {showPaymentAction && (
+            <div className="bg-amber-100 px-4 py-2 flex items-center gap-2 text-amber-800">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-sm font-medium">Segera lakukan pembayaran</span>
+            </div>
+          )}
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between mb-2">
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-sm font-semibold truncate">{order.order_number}</p>
+                <p className="text-xs text-muted-foreground">{formatDate(order.created_at)}</p>
+              </div>
+              <Badge className={cn(status.bgColor, status.color, "border-0 gap-1 shrink-0 ml-2")}>
+                <StatusIcon className="w-3 h-3" />
+                {status.label}
+              </Badge>
+            </div>
+            <div className="text-sm text-muted-foreground mb-3">
+              {order.order_items?.slice(0, 2).map((item: any) => (
+                <p key={item.id} className="truncate">
+                  {item.product_name} <span className="text-foreground">x{item.quantity}</span>
+                </p>
+              ))}
+              {(order.order_items?.length || 0) > 2 && (
+                <p className="text-xs text-primary">+{(order.order_items?.length || 0) - 2} item lainnya</p>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="font-bold text-primary text-lg">{formatPrice(order.total)}</p>
+              {showPaymentAction ? (
+                <Link to={`/buyer/orders/${order.id}`}>
+                  <Button size="sm" className="gap-2">
+                    <Upload className="w-4 h-4" />
+                    Upload Bukti
+                  </Button>
+                </Link>
+              ) : (
+                <Link to={`/buyer/orders/${order.id}`}>
+                  <Button variant="ghost" size="sm" className="gap-1">
+                    Detail
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
 
   return (
     <BuyerLayout>
@@ -136,55 +223,38 @@ export default function Orders() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Active Orders */}
-          {activeOrders.length > 0 && (
+          {/* Unpaid Orders - Prominent Warning */}
+          {unpaidOrders.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                Pesanan Aktif ({activeOrders.length})
+              <Alert className="mb-4 border-amber-300 bg-amber-50">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                <AlertDescription className="text-amber-800">
+                  <span className="font-semibold">{unpaidOrders.length} pesanan</span> menunggu pembayaran. 
+                  Upload bukti transfer sekarang agar pesanan segera diproses.
+                </AlertDescription>
+              </Alert>
+              <h2 className="text-sm font-semibold text-amber-700 mb-3 uppercase tracking-wide flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Menunggu Pembayaran ({unpaidOrders.length})
               </h2>
               <div className="space-y-3">
-                {activeOrders.map((order, index) => {
-                  const status = statusConfig[order.status] || statusConfig.new;
-                  const StatusIcon = status.icon;
+                {unpaidOrders.map((order, index) => (
+                  <OrderCard key={order.id} order={order} index={index} showPaymentAction />
+                ))}
+              </div>
+            </div>
+          )}
 
-                  return (
-                    <Link 
-                      key={order.id} 
-                      to={`/buyer/orders/${order.id}`}
-                      className="block animate-fade-in"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <Card className="hover:shadow-md transition-all hover:border-primary/30">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="min-w-0 flex-1">
-                              <p className="font-mono text-sm font-semibold truncate">{order.order_number}</p>
-                              <p className="text-xs text-muted-foreground">{formatDate(order.created_at)}</p>
-                            </div>
-                            <Badge className={cn(status.bgColor, status.color, "border-0 gap-1")}>
-                              <StatusIcon className="w-3 h-3" />
-                              {status.label}
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-muted-foreground mb-2">
-                            {order.order_items?.slice(0, 2).map((item: any) => (
-                              <p key={item.id} className="truncate">
-                                {item.product_name} <span className="text-foreground">x{item.quantity}</span>
-                              </p>
-                            ))}
-                            {(order.order_items?.length || 0) > 2 && (
-                              <p className="text-xs text-primary">+{(order.order_items?.length || 0) - 2} item lainnya</p>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <p className="font-bold text-primary text-lg">{formatPrice(order.total)}</p>
-                            <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  );
-                })}
+          {/* Processing Orders */}
+          {processingOrders.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                Sedang Diproses ({processingOrders.length})
+              </h2>
+              <div className="space-y-3">
+                {processingOrders.map((order, index) => (
+                  <OrderCard key={order.id} order={order} index={index} />
+                ))}
               </div>
             </div>
           )}
@@ -205,7 +275,7 @@ export default function Orders() {
                       key={order.id} 
                       to={`/buyer/orders/${order.id}`}
                       className="block animate-fade-in"
-                      style={{ animationDelay: `${(activeOrders.length + index) * 50}ms` }}
+                      style={{ animationDelay: `${(processingOrders.length + index) * 50}ms` }}
                     >
                       <Card className="hover:shadow-md transition-all opacity-80 hover:opacity-100">
                         <CardContent className="p-4">
