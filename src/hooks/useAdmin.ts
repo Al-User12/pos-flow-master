@@ -319,6 +319,80 @@ export function useAdminCouriers() {
   });
 }
 
+export function useUpdateCourier() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: {
+      id: string;
+      is_active?: boolean;
+      phone?: string;
+      vehicle_type?: string;
+      vehicle_plate?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('courier_profiles')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-couriers'] });
+    },
+  });
+}
+
+// Customers (Buyers)
+export function useAdminCustomers() {
+  return useQuery({
+    queryKey: ['admin-customers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('buyer_profiles')
+        .select(`
+          *,
+          domicile:domiciles(id, name),
+          bank:banks(id, name),
+          referrer:buyer_profiles!buyer_profiles_referrer_id_fkey(id, full_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useUpdateCustomer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: {
+      id: string;
+      is_verified?: boolean;
+      commission_balance?: number;
+      commission_pending?: number;
+    }) => {
+      const { data, error } = await supabase
+        .from('buyer_profiles')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
+    },
+  });
+}
+
 // Categories
 export function useAdminCategories() {
   return useQuery({
