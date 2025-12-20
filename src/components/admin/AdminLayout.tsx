@@ -23,10 +23,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { OrderNotifications } from './OrderNotifications';
 
+import { Camera } from 'lucide-react';
+
 const menuItems = [
   { icon: LayoutDashboard, label: 'Overview', path: '/admin', description: 'Ringkasan bisnis' },
   { icon: ShoppingCart, label: 'Pesanan', path: '/admin/orders', description: 'Kelola pesanan' },
   { icon: CreditCard, label: 'Pembayaran', path: '/admin/payments', description: 'Konfirmasi pembayaran' },
+  { icon: Camera, label: 'Bukti Kirim', path: '/admin/delivery-proofs', description: 'Bukti pengiriman' },
   { icon: Package, label: 'Produk', path: '/admin/products', description: 'Kelola produk' },
   { icon: Box, label: 'Inventori', path: '/admin/inventory', description: 'Stok & mutasi' },
   { icon: DollarSign, label: 'Harga & HPP', path: '/admin/pricing', description: 'Kelola harga' },
