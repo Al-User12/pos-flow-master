@@ -605,3 +605,175 @@ export function useUpdatePayoutStatus() {
     },
   });
 }
+
+// Reports & Analytics
+export function useAdminReports(period: '7d' | '30d' | 'month') {
+  return useQuery({
+    queryKey: ['admin-reports', period],
+    queryFn: async () => {
+      const now = new Date();
+      let startDate: Date;
+      
+      if (period === '7d') {
+        startDate = subDays(now, 7);
+      } else if (period === '30d') {
+        startDate = subDays(now, 30);
+      } else {
+        startDate = startOfMonth(now);
+      }
+
+      // Get orders in period
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items(quantity, subtotal, product:products(name, category_id)),
+          courier:courier_profiles(full_name)
+        `)
+        .gte('created_at', startDate.toISOString());
+
+      if (ordersError) throw ordersError;
+
+      // Get previous period for comparison
+      const prevStartDate = subDays(startDate, period === '7d' ? 7 : period === '30d' ? 30 : 30);
+      const { data: prevOrders, error: prevError } = await supabase
+        .from('orders')
+        .select('total')
+        .gte('created_at', prevStartDate.toISOString())
+        .lt('created_at', startDate.toISOString());
+
+      if (prevError) throw prevError;
+
+      // Get inventory for stock levels
+      const { data: inventory, error: invError } = await supabase
+        .from('inventory')
+        .select('*, product:products(name, sku, is_active)')
+        .order('quantity', { ascending: true });
+
+      if (invError) throw invError;
+
+      // Get categories
+      const { data: categories, error: catError } = await supabase
+        .from('categories')
+        .select('id, name');
+
+      if (catError) throw catError;
+
+      // Calculate stats
+      const totalRevenue = orders?.reduce((sum, o) => sum + Number(o.total), 0) || 0;
+      const prevRevenue = prevOrders?.reduce((sum, o) => sum + Number(o.total), 0) || 0;
+      const revenueGrowth = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue * 100).toFixed(1) : 0;
+      
+      const completedOrders = orders?.filter(o => o.status === 'delivered').length || 0;
+      const cancelledOrders = orders?.filter(o => o.status === 'cancelled').length || 0;
+      const totalOrders = orders?.length || 0;
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      
+      const uniqueBuyers = new Set(orders?.map(o => o.buyer_id)).size;
+
+      // Daily sales data
+      const days = eachDayOfInterval({ start: startDate, end: now });
+      const dailySales = days.map(day => {
+        const dayStr = format(day, 'yyyy-MM-dd');
+        const dayOrders = orders?.filter(o => 
+          format(new Date(o.created_at), 'yyyy-MM-dd') === dayStr
+        ) || [];
+        return {
+          date: dayStr,
+          revenue: dayOrders.reduce((sum, o) => sum + Number(o.total), 0),
+          orders: dayOrders.length,
+        };
+      });
+
+      // Sales by category
+      const categoryMap = new Map<string, number>();
+      orders?.forEach(order => {
+        order.order_items?.forEach((item: any) => {
+          const catId = item.product?.category_id;
+          if (catId) {
+            categoryMap.set(catId, (categoryMap.get(catId) || 0) + Number(item.subtotal));
+          }
+        });
+      });
+      const salesByCategory = Array.from(categoryMap.entries()).map(([catId, value]) => ({
+        name: categories?.find(c => c.id === catId)?.name || 'Lainnya',
+        value,
+      })).slice(0, 5);
+
+      // Top products
+      const productMap = new Map<string, { name: string; quantity: number }>();
+      orders?.forEach(order => {
+        order.order_items?.forEach((item: any) => {
+          const name = item.product?.name || 'Unknown';
+          const existing = productMap.get(name) || { name, quantity: 0 };
+          productMap.set(name, { name, quantity: existing.quantity + item.quantity });
+        });
+      });
+      const topProducts = Array.from(productMap.values())
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5);
+
+      // Orders by status
+      const statusMap = new Map<string, number>();
+      orders?.forEach(order => {
+        statusMap.set(order.status, (statusMap.get(order.status) || 0) + 1);
+      });
+      const ordersByStatus = Array.from(statusMap.entries()).map(([name, value]) => ({
+        name,
+        value,
+      }));
+
+      // Courier performance
+      const courierMap = new Map<string, number>();
+      orders?.filter(o => o.status === 'delivered' && o.courier).forEach(order => {
+        const name = order.courier?.full_name || 'Unknown';
+        courierMap.set(name, (courierMap.get(name) || 0) + 1);
+      });
+      const courierPerformance = Array.from(courierMap.entries())
+        .map(([name, deliveries]) => ({ name, deliveries }))
+        .sort((a, b) => b.deliveries - a.deliveries)
+        .slice(0, 5);
+
+      // Stock levels
+      const activeInventory = inventory?.filter(inv => inv.product?.is_active) || [];
+      const lowStock = activeInventory.filter(inv => inv.quantity <= inv.min_stock).length;
+      const mediumStock = activeInventory.filter(inv => inv.quantity > inv.min_stock && inv.quantity <= inv.min_stock * 2).length;
+      const goodStock = activeInventory.filter(inv => inv.quantity > inv.min_stock * 2).length;
+      const stockLevels = [
+        { name: 'Stok Rendah', value: lowStock },
+        { name: 'Stok Sedang', value: mediumStock },
+        { name: 'Stok Cukup', value: goodStock },
+      ];
+
+      // Low stock products
+      const lowStockProducts = activeInventory
+        .filter(inv => inv.quantity <= inv.min_stock)
+        .slice(0, 10)
+        .map(inv => ({
+          name: inv.product?.name || 'Unknown',
+          sku: inv.product?.sku || '',
+          quantity: inv.quantity,
+          minStock: inv.min_stock,
+        }));
+
+      return {
+        totalRevenue,
+        revenueGrowth,
+        totalOrders,
+        completedOrders,
+        cancelledOrders,
+        averageOrderValue,
+        activeBuyers: uniqueBuyers,
+        dailySales,
+        salesByCategory,
+        topProducts,
+        ordersByStatus,
+        courierPerformance,
+        stockLevels,
+        lowStockProducts,
+      };
+    },
+  });
+}
+
+import { subDays, startOfMonth, eachDayOfInterval, format } from 'date-fns';
