@@ -46,13 +46,13 @@ const settingGroups: SettingGroup[] = [
     title: 'Komisi & Referral',
     description: 'Pengaturan persentase komisi referral',
     icon: <Percent className="h-5 w-5" />,
-    settings: ['referral_commission_percent', 'minimum_payout_amount', 'commission_enabled'],
+    settings: ['referral_commission_percentage', 'minimum_payout_amount', 'commission_enabled'],
   },
   {
     title: 'Pembayaran',
     description: 'Konfigurasi rekening dan pembayaran',
     icon: <DollarSign className="h-5 w-5" />,
-    settings: ['payment_bank_name', 'payment_account_number', 'payment_account_name', 'admin_fee'],
+    settings: ['admin_bank_name', 'admin_bank_account', 'admin_bank_holder', 'admin_fee'],
   },
 ];
 
@@ -64,12 +64,12 @@ const settingLabels: Record<string, string> = {
   shipping_cost_default: 'Biaya Pengiriman Default',
   free_shipping_minimum: 'Minimum Gratis Ongkir',
   shipping_enabled: 'Aktifkan Pengiriman',
-  referral_commission_percent: 'Persentase Komisi (%)',
+  referral_commission_percentage: 'Persentase Komisi (%)',
   minimum_payout_amount: 'Minimum Pencairan',
   commission_enabled: 'Aktifkan Komisi',
-  payment_bank_name: 'Nama Bank',
-  payment_account_number: 'Nomor Rekening',
-  payment_account_name: 'Nama Pemilik Rekening',
+  admin_bank_name: 'Nama Bank',
+  admin_bank_account: 'Nomor Rekening',
+  admin_bank_holder: 'Nama Pemilik Rekening',
   admin_fee: 'Biaya Admin',
 };
 
@@ -81,12 +81,12 @@ const settingTypes: Record<string, 'text' | 'number' | 'textarea' | 'boolean'> =
   shipping_cost_default: 'number',
   free_shipping_minimum: 'number',
   shipping_enabled: 'boolean',
-  referral_commission_percent: 'number',
+  referral_commission_percentage: 'number',
   minimum_payout_amount: 'number',
   commission_enabled: 'boolean',
-  payment_bank_name: 'text',
-  payment_account_number: 'text',
-  payment_account_name: 'text',
+  admin_bank_name: 'text',
+  admin_bank_account: 'text',
+  admin_bank_holder: 'text',
   admin_fee: 'number',
 };
 

@@ -180,7 +180,10 @@ export default function AdminOverview() {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+        <Card 
+          className="cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => window.location.href = '/admin/products'}
+        >
           <CardHeader>
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
               <Package className="h-5 w-5 text-primary" />
@@ -190,7 +193,10 @@ export default function AdminOverview() {
           </CardHeader>
         </Card>
 
-        <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+        <Card 
+          className="cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => window.location.href = '/admin/inventory'}
+        >
           <CardHeader>
             <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center mb-2">
               <TrendingUp className="h-5 w-5 text-info" />
@@ -200,13 +206,16 @@ export default function AdminOverview() {
           </CardHeader>
         </Card>
 
-        <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+        <Card 
+          className="cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => window.location.href = '/admin/orders'}
+        >
           <CardHeader>
             <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center mb-2">
               <Truck className="h-5 w-5 text-warning" />
             </div>
-            <CardTitle className="text-base">Assign Kurir</CardTitle>
-            <CardDescription>Tugaskan kurir ke pesanan</CardDescription>
+            <CardTitle className="text-base">Kelola Pesanan</CardTitle>
+            <CardDescription>Lihat dan assign kurir</CardDescription>
           </CardHeader>
         </Card>
       </div>
