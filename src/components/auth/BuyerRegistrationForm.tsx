@@ -100,11 +100,10 @@ export function BuyerRegistrationForm({ onSuccess, onSwitchToLogin }: BuyerRegis
       // Find referrer if referral code provided
       let referrerId: string | null = null;
       if (data.referralCode) {
-        // For now, we'll use a simple approach - referral code could be the first 8 chars of buyer_profile id
         const { data: referrer } = await supabase
           .from('buyer_profiles')
           .select('id')
-          .ilike('id', `${data.referralCode}%`)
+          .eq('referral_code', data.referralCode.toUpperCase())
           .maybeSingle();
 
         if (!referrer) {

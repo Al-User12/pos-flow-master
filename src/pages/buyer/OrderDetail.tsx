@@ -21,7 +21,9 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { BuyerLayout } from '@/components/buyer/BuyerLayout';
 import { PaymentUploadForm } from '@/components/buyer/PaymentUploadForm';
+import { CancelOrderDialog } from '@/components/buyer/CancelOrderDialog';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminBankInfo } from '@/hooks/useSystemSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
@@ -43,6 +45,7 @@ export default function OrderDetail() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { profileId } = useAuth();
+  const { data: bankInfo } = useAdminBankInfo();
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['buyer-order-detail', orderId],
@@ -323,12 +326,19 @@ export default function OrderDetail() {
           </Card>
         )}
 
-        {/* Payment Upload Form - Show for new or waiting_payment status without payment */}
+        {/* Cancel Order Button - Show for new or waiting_payment status without payment */}
         {!payment && (order.status === 'new' || order.status === 'waiting_payment') && (
-          <PaymentUploadForm 
-            orderId={order.id} 
-            orderTotal={order.total}
-          />
+          <div className="space-y-3">
+            <PaymentUploadForm 
+              orderId={order.id} 
+              orderTotal={order.total}
+              bankInfo={bankInfo}
+            />
+            <CancelOrderDialog 
+              orderId={order.id}
+              orderNumber={order.order_number}
+            />
+          </div>
         )}
 
         {/* Payment Info */}

@@ -12,10 +12,11 @@ import { toast } from 'sonner';
 interface PaymentUploadFormProps {
   orderId: string;
   orderTotal: number;
+  bankInfo?: Record<string, string>;
   onSuccess?: () => void;
 }
 
-export function PaymentUploadForm({ orderId, orderTotal, onSuccess }: PaymentUploadFormProps) {
+export function PaymentUploadForm({ orderId, orderTotal, bankInfo, onSuccess }: PaymentUploadFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [amount, setAmount] = useState(orderTotal.toString());
@@ -142,15 +143,39 @@ export function PaymentUploadForm({ orderId, orderTotal, onSuccess }: PaymentUpl
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-4">
+        {/* Admin Bank Info */}
+        {bankInfo && (
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
+            <h4 className="font-medium text-sm flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-primary" />
+              Transfer ke Rekening:
+            </h4>
+            <div className="text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Bank</span>
+                <span className="font-medium">{bankInfo.admin_bank_name || 'BCA'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">No. Rekening</span>
+                <span className="font-mono font-medium">{bankInfo.admin_bank_account || '1234567890'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Atas Nama</span>
+                <span className="font-medium">{bankInfo.admin_bank_holder || 'Osher Shop'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Bank Selection */}
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
             <Building2 className="w-4 h-4" />
-            Bank Tujuan
+            Bank Pengirim
           </Label>
           <Select value={bankId} onValueChange={setBankId}>
             <SelectTrigger>
-              <SelectValue placeholder="Pilih bank tujuan transfer" />
+              <SelectValue placeholder="Pilih bank Anda" />
             </SelectTrigger>
             <SelectContent>
               {banks?.map((bank) => (
