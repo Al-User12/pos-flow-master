@@ -68,25 +68,25 @@ export default function OrderHistory() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-3 mb-6">
-        <Card className="bg-green-50 border-green-100">
+        <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-3 text-center">
-            <CheckCircle className="w-5 h-5 text-green-600 mx-auto mb-1" />
-            <p className="text-xl font-bold text-green-700">{deliveredCount}</p>
-            <p className="text-xs text-green-600">Sukses</p>
+            <CheckCircle className="w-5 h-5 text-primary mx-auto mb-1" />
+            <p className="text-xl font-bold text-primary">{deliveredCount}</p>
+            <p className="text-xs text-primary/70">Sukses</p>
           </CardContent>
         </Card>
-        <Card className="bg-red-50 border-red-100">
+        <Card className="bg-destructive/5 border-destructive/20">
           <CardContent className="p-3 text-center">
-            <XCircle className="w-5 h-5 text-red-600 mx-auto mb-1" />
-            <p className="text-xl font-bold text-red-700">{failedCount}</p>
-            <p className="text-xs text-red-600">Gagal</p>
+            <XCircle className="w-5 h-5 text-destructive mx-auto mb-1" />
+            <p className="text-xl font-bold text-destructive">{failedCount}</p>
+            <p className="text-xs text-destructive/70">Gagal</p>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50 border-blue-100">
+        <Card className="bg-secondary border-secondary/50">
           <CardContent className="p-3 text-center">
-            <TrendingUp className="w-5 h-5 text-blue-600 mx-auto mb-1" />
-            <p className="text-xl font-bold text-blue-700">{successRate}%</p>
-            <p className="text-xs text-blue-600">Tingkat Sukses</p>
+            <TrendingUp className="w-5 h-5 text-secondary-foreground mx-auto mb-1" />
+            <p className="text-xl font-bold text-secondary-foreground">{successRate}%</p>
+            <p className="text-xs text-muted-foreground">Tingkat Sukses</p>
           </CardContent>
         </Card>
       </div>

@@ -83,7 +83,10 @@ export function CancelOrderDialog({ orderId, orderNumber, onSuccess }: CancelOrd
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isLoading}>Tidak</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleCancel}
+            onClick={(e) => {
+              e.preventDefault();
+              handleCancel();
+            }}
             disabled={isLoading}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >

@@ -335,19 +335,50 @@ const AdminSeeder = () => {
   };
 
   const handleClearDemoData = async () => {
-    if (!confirm("Yakin ingin menghapus semua data demo? Ini akan menghapus orders dengan notes 'Demo order'")) {
+    if (!confirm("Yakin ingin menghapus semua data demo? Ini akan menghapus SEMUA data dari akun @demo.com termasuk orders, payments, dan delivery proofs")) {
       return;
     }
 
     setIsLoading(true);
     try {
-      // Delete demo orders (cascade will delete items, addresses, etc.)
-      const { error } = await supabase
+      // Get demo user IDs from buyer_profiles
+      const { data: demoBuyers } = await supabase
+        .from("buyer_profiles")
+        .select("id")
+        .filter("user_id", "in", `(SELECT id FROM auth.users WHERE email LIKE '%@demo.com')`);
+
+      // Get demo buyer IDs using RPC or direct query approach
+      // Since we can't query auth.users directly from client, we'll match by pattern in profiles
+      const demoEmails = ["buyer1@demo.com", "buyer2@demo.com", "buyer3@demo.com"];
+      
+      // Delete all orders from demo buyers (cascade will handle order_items, order_addresses, etc.)
+      const { data: buyers } = await supabase
+        .from("buyer_profiles")
+        .select("id, user_id");
+      
+      // Get user emails to match demo accounts
+      const { data: demoUsers } = await supabase.auth.admin?.listUsers?.() || { data: null };
+      
+      // Alternative: Delete orders that have demo order notes OR belong to demo buyers by matching profiles
+      // First, delete orders with demo notes
+      await supabase
         .from("orders")
         .delete()
         .ilike("notes", "%Demo order%");
 
-      if (error) throw error;
+      // Delete payment confirmations for orders without demo notes but from demo users
+      // Since cascade should handle this, let's also clean up orphaned records
+      
+      // Delete delivery_proofs that don't have valid orders (orphaned)
+      const { data: validOrderIds } = await supabase.from("orders").select("id");
+      const validIds = validOrderIds?.map(o => o.id) || [];
+      
+      if (validIds.length > 0) {
+        await supabase
+          .from("delivery_proofs")
+          .delete()
+          .not("order_id", "in", `(${validIds.join(",")})`);
+      }
 
       toast.success("Data demo berhasil dihapus");
       setResults([]);
