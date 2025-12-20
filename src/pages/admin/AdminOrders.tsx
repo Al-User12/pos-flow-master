@@ -1,0 +1,401 @@
+import { useState } from 'react';
+import { Search, Eye, Truck, ShoppingCart, Filter } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useAdminOrders, useUpdateOrderStatus, useAdminCouriers } from '@/hooks/useAdmin';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { Database } from '@/integrations/supabase/types';
+
+type OrderStatus = Database['public']['Enums']['order_status'];
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(value);
+}
+
+const statusColors: Record<string, string> = {
+  new: 'bg-info text-info-foreground',
+  waiting_payment: 'bg-warning text-warning-foreground',
+  paid: 'bg-success text-success-foreground',
+  assigned: 'bg-primary text-primary-foreground',
+  picked_up: 'bg-primary text-primary-foreground',
+  on_delivery: 'bg-accent text-accent-foreground',
+  delivered: 'bg-success text-success-foreground',
+  cancelled: 'bg-destructive text-destructive-foreground',
+  refunded: 'bg-muted text-muted-foreground',
+  failed: 'bg-destructive text-destructive-foreground',
+  returned: 'bg-muted text-muted-foreground',
+};
+
+const statusLabels: Record<string, string> = {
+  new: 'Baru',
+  waiting_payment: 'Menunggu Bayar',
+  paid: 'Dibayar',
+  assigned: 'Ditugaskan',
+  picked_up: 'Diambil',
+  on_delivery: 'Dikirim',
+  delivered: 'Selesai',
+  cancelled: 'Dibatalkan',
+  refunded: 'Refund',
+  failed: 'Gagal',
+  returned: 'Dikembalikan',
+};
+
+const statusOptions: OrderStatus[] = [
+  'new', 'waiting_payment', 'paid', 'assigned', 'picked_up', 
+  'on_delivery', 'delivered', 'cancelled', 'refunded', 'failed', 'returned'
+];
+
+export default function AdminOrders() {
+  const { toast } = useToast();
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
+  const { data: orders, isLoading } = useAdminOrders(statusFilter === 'all' ? undefined : statusFilter);
+  const { data: couriers } = useAdminCouriers();
+  const updateStatus = useUpdateOrderStatus();
+
+  const [search, setSearch] = useState('');
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<typeof orders[0] | null>(null);
+  const [selectedCourier, setSelectedCourier] = useState('');
+  const [newStatus, setNewStatus] = useState<OrderStatus>('new');
+
+  const filteredOrders = orders?.filter(o =>
+    o.order_number.toLowerCase().includes(search.toLowerCase()) ||
+    o.buyer?.full_name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleViewDetail = (order: typeof orders[0]) => {
+    setSelectedOrder(order);
+    setDetailDialogOpen(true);
+  };
+
+  const handleOpenAssign = (order: typeof orders[0]) => {
+    setSelectedOrder(order);
+    setSelectedCourier(order.courier_id || '');
+    setNewStatus(order.status);
+    setAssignDialogOpen(true);
+  };
+
+  const handleUpdateOrder = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      await updateStatus.mutateAsync({
+        orderId: selectedOrder.id,
+        status: newStatus,
+        courierId: selectedCourier || undefined,
+      });
+      toast({ title: 'Pesanan berhasil diperbarui' });
+      setAssignDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: 'Gagal memperbarui pesanan',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between">
+        <div className="flex flex-1 gap-4 max-w-2xl">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari pesanan..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as OrderStatus | 'all')}>
+            <SelectTrigger className="w-[180px]">
+              <Filter className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="Filter status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Status</SelectItem>
+              {statusOptions.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {statusLabels[status]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5" />
+            Daftar Pesanan
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>No. Pesanan</TableHead>
+                    <TableHead>Pembeli</TableHead>
+                    <TableHead>Tanggal</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Kurir</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders?.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{order.buyer?.full_name || '-'}</p>
+                          <p className="text-xs text-muted-foreground">{order.buyer?.phone}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(order.created_at), 'dd MMM yyyy HH:mm', { locale: id })}
+                      </TableCell>
+                      <TableCell className="font-semibold">
+                        {formatCurrency(Number(order.total))}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={statusColors[order.status]}>
+                          {statusLabels[order.status]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {order.courier?.full_name || '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleViewDetail(order)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenAssign(order)}
+                          >
+                            <Truck className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Order Detail Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detail Pesanan {selectedOrder?.order_number}</DialogTitle>
+            <DialogDescription>
+              {selectedOrder && format(new Date(selectedOrder.created_at), 'dd MMMM yyyy HH:mm', { locale: id })}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedOrder && (
+            <div className="space-y-6">
+              {/* Status */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Status:</span>
+                <Badge className={statusColors[selectedOrder.status]}>
+                  {statusLabels[selectedOrder.status]}
+                </Badge>
+              </div>
+
+              {/* Customer Info */}
+              <div>
+                <h4 className="font-semibold mb-2">Informasi Pembeli</h4>
+                <div className="bg-muted/50 rounded-lg p-4 space-y-1">
+                  <p><span className="text-muted-foreground">Nama:</span> {selectedOrder.buyer?.full_name}</p>
+                  <p><span className="text-muted-foreground">Telepon:</span> {selectedOrder.buyer?.phone}</p>
+                </div>
+              </div>
+
+              {/* Delivery Address */}
+              {selectedOrder.order_address?.[0] && (
+                <div>
+                  <h4 className="font-semibold mb-2">Alamat Pengiriman</h4>
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-1">
+                    <p className="font-medium">{selectedOrder.order_address[0].recipient_name}</p>
+                    <p>{selectedOrder.order_address[0].phone}</p>
+                    <p>{selectedOrder.order_address[0].address}</p>
+                    {selectedOrder.order_address[0].landmark && (
+                      <p className="text-muted-foreground">Patokan: {selectedOrder.order_address[0].landmark}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Order Items */}
+              <div>
+                <h4 className="font-semibold mb-2">Item Pesanan</h4>
+                <div className="space-y-2">
+                  {selectedOrder.order_items?.map((item) => (
+                    <div key={item.id} className="flex justify-between items-center bg-muted/50 rounded-lg p-3">
+                      <div className="flex items-center gap-3">
+                        {item.product?.image_url ? (
+                          <img 
+                            src={item.product.image_url} 
+                            alt={item.product_name}
+                            className="h-10 w-10 rounded object-cover"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded bg-muted" />
+                        )}
+                        <div>
+                          <p className="font-medium">{item.product_name}</p>
+                          <p className="text-sm text-muted-foreground">x{item.quantity}</p>
+                        </div>
+                      </div>
+                      <p className="font-semibold">{formatCurrency(Number(item.subtotal))}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Order Summary */}
+              <div className="border-t pt-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>{formatCurrency(Number(selectedOrder.subtotal))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Ongkir</span>
+                  <span>{formatCurrency(Number(selectedOrder.shipping_cost))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Admin Fee</span>
+                  <span>{formatCurrency(Number(selectedOrder.admin_fee))}</span>
+                </div>
+                <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                  <span>Total</span>
+                  <span>{formatCurrency(Number(selectedOrder.total))}</span>
+                </div>
+              </div>
+
+              {/* Courier Info */}
+              {selectedOrder.courier && (
+                <div>
+                  <h4 className="font-semibold mb-2">Informasi Kurir</h4>
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-1">
+                    <p><span className="text-muted-foreground">Nama:</span> {selectedOrder.courier.full_name}</p>
+                    <p><span className="text-muted-foreground">Telepon:</span> {selectedOrder.courier.phone}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Courier Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Pesanan</DialogTitle>
+            <DialogDescription>
+              Perbarui status dan kurir untuk pesanan {selectedOrder?.order_number}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status Pesanan</label>
+              <Select value={newStatus} onValueChange={(v) => setNewStatus(v as OrderStatus)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {statusLabels[status]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Kurir</label>
+              <Select value={selectedCourier} onValueChange={setSelectedCourier}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih kurir" />
+                </SelectTrigger>
+                <SelectContent>
+                  {couriers?.filter(c => c.is_active).map((courier) => (
+                    <SelectItem key={courier.id} value={courier.id}>
+                      {courier.full_name} - {courier.phone}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={handleUpdateOrder} disabled={updateStatus.isPending}>
+              {updateStatus.isPending ? 'Menyimpan...' : 'Simpan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
