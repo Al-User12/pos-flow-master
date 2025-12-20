@@ -155,18 +155,8 @@ Deno.serve(async (req) => {
       await admin.from("admin_profiles").delete().in("id", adminProfileIds);
     }
 
-    // roles
-    const { count: rolesCount } = await admin.from("user_roles").delete({ count: "exact" }).in("user_id", demoUserIds);
-    deleted.user_roles = rolesCount ?? 0;
-
-    // delete auth users (best-effort)
-    for (const uid of demoUserIds) {
-      try {
-        await admin.auth.admin.deleteUser(uid);
-      } catch (e) {
-        console.error("Failed deleting auth user", uid, e);
-      }
-    }
+    // Keep user_roles and auth users intact so they can be re-seeded
+    // Just reset profiles data instead of deleting accounts
 
     return new Response(JSON.stringify({ success: true, deleted }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
