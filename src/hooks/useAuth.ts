@@ -139,15 +139,17 @@ export function useAuth() {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
-    if (!error) {
-      setAuthState({
-        user: null,
-        session: null,
-        role: null,
-        profileId: null,
-        loading: false,
-      });
-    }
+    
+    // Always clear client state on logout, even if server returns error
+    // (e.g., session_not_found means session was already invalidated)
+    setAuthState({
+      user: null,
+      session: null,
+      role: null,
+      profileId: null,
+      loading: false,
+    });
+    
     return { error };
   };
 
