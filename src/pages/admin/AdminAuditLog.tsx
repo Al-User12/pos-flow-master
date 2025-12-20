@@ -19,10 +19,14 @@ import {
   Settings,
   Truck,
   Wallet,
-  Clock
+  Clock,
+  Download
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/shared/DataPagination';
+import { exportToCSV, formatDate } from '@/lib/exportUtils';
 
 const entityTypeLabels: Record<string, string> = {
   orders: 'Pesanan',
@@ -69,6 +73,28 @@ export default function AdminAuditLog() {
     
     return matchesSearch && matchesEntity && matchesAction;
   });
+
+  const {
+    paginatedData,
+    currentPage,
+    totalPages,
+    goToPage,
+    startIndex,
+    endIndex,
+    totalItems,
+  } = usePagination({ data: filteredLogs, itemsPerPage: 20 });
+
+  const handleExport = () => {
+    if (!filteredLogs) return;
+    const data = filteredLogs.map(l => ({
+      Waktu: formatDate(new Date(l.created_at)),
+      Entitas: entityTypeLabels[l.entity_type] || l.entity_type,
+      Aksi: l.action.toUpperCase(),
+      'Entity ID': l.entity_id,
+      'IP Address': l.ip_address || '-',
+    }));
+    exportToCSV(data, `audit-log-${formatDate(new Date())}`);
+  };
 
   const formatJsonValue = (value: any) => {
     if (!value) return '-';
@@ -165,6 +191,10 @@ export default function AdminAuditLog() {
                 <SelectItem value="insert">Insert</SelectItem>
               </SelectContent>
             </Select>
+            <Button variant="outline" onClick={handleExport} disabled={!filteredLogs?.length}>
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
           </div>
 
           {isLoading ? (
@@ -187,14 +217,14 @@ export default function AdminAuditLog() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredLogs?.length === 0 ? (
+                  {paginatedData?.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         Tidak ada log ditemukan
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredLogs?.map((log) => (
+                    paginatedData?.map((log) => (
                       <TableRow key={log.id}>
                         <TableCell>
                           <div>
@@ -303,6 +333,16 @@ export default function AdminAuditLog() {
                 </TableBody>
               </Table>
             </div>
+          )}
+          {totalPages > 1 && (
+            <DataPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={goToPage}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              totalItems={totalItems}
+            />
           )}
         </CardContent>
       </Card>

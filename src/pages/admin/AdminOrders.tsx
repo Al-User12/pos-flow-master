@@ -113,18 +113,15 @@ export default function AdminOrders() {
 
   const handleExport = () => {
     if (!filteredOrders) return;
-    exportToCSV(
-      filteredOrders,
-      [
-        { key: 'order_number', header: 'No. Pesanan' },
-        { key: 'buyer', header: 'Pembeli', formatter: (v) => v?.full_name || '-' },
-        { key: 'created_at', header: 'Tanggal', formatter: (v) => formatDate(v) },
-        { key: 'total', header: 'Total', formatter: (v) => formatCurrency(Number(v)) },
-        { key: 'status', header: 'Status', formatter: (v) => statusLabels[v] || v },
-        { key: 'courier', header: 'Kurir', formatter: (v) => v?.full_name || '-' },
-      ],
-      'orders'
-    );
+    const data = filteredOrders.map(o => ({
+      'No. Pesanan': o.order_number,
+      'Pembeli': o.buyer?.full_name || '-',
+      'Tanggal': formatDate(o.created_at),
+      'Total': formatCurrency(Number(o.total)),
+      'Status': statusLabels[o.status] || o.status,
+      'Kurir': o.courier?.full_name || '-',
+    }));
+    exportToCSV(data, 'orders');
     toast({ title: 'Export berhasil', description: 'File CSV berhasil diunduh' });
   };
 

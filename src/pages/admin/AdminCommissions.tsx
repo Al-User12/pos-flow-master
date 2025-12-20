@@ -23,8 +23,12 @@ import {
   Users,
   ArrowUpRight,
   ArrowDownRight,
-  Building
+  Building,
+  Download
 } from 'lucide-react';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/shared/DataPagination';
+import { exportToCSV, formatDate } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -84,6 +88,54 @@ export default function AdminCommissions() {
     p.bank_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.account_number.includes(searchQuery)
   );
+
+  const {
+    paginatedData: paginatedPayouts,
+    currentPage: payoutPage,
+    totalPages: payoutTotalPages,
+    goToPage: goToPayoutPage,
+    startIndex: payoutStartIndex,
+    endIndex: payoutEndIndex,
+    totalItems: payoutTotalItems,
+  } = usePagination({ data: filteredPayouts, itemsPerPage: 10 });
+
+  const {
+    paginatedData: paginatedCommissions,
+    currentPage: commPage,
+    totalPages: commTotalPages,
+    goToPage: goToCommPage,
+    startIndex: commStartIndex,
+    endIndex: commEndIndex,
+    totalItems: commTotalItems,
+  } = usePagination({ data: filteredCommissions, itemsPerPage: 10 });
+
+  const handleExportPayouts = () => {
+    if (!filteredPayouts) return;
+    const data = filteredPayouts.map(p => ({
+      Pembeli: p.buyer?.full_name || '-',
+      Bank: p.bank_name,
+      'No Rekening': p.account_number,
+      'Nama Rekening': p.account_name,
+      Jumlah: Number(p.amount),
+      Status: payoutStatusLabels[p.status],
+      Tanggal: formatDate(new Date(p.created_at)),
+    }));
+    exportToCSV(data, `payout-${formatDate(new Date())}`);
+  };
+
+  const handleExportCommissions = () => {
+    if (!filteredCommissions) return;
+    const data = filteredCommissions.map(c => ({
+      Referrer: c.referrer?.full_name || '-',
+      Pembeli: c.buyer?.full_name || '-',
+      Tipe: commissionTypeLabels[c.commission_type],
+      Jumlah: Number(c.amount),
+      Persentase: c.percentage ? `${c.percentage}%` : '-',
+      'Subtotal Order': c.order_subtotal || 0,
+      Tanggal: formatDate(new Date(c.created_at)),
+    }));
+    exportToCSV(data, `komisi-${formatDate(new Date())}`);
+  };
 
   const handlePayoutAction = (payout: typeof payouts extends (infer T)[] | undefined ? T : never, action: 'approve' | 'reject' | 'complete') => {
     setSelectedPayout(payout);
@@ -200,6 +252,10 @@ export default function AdminCommissions() {
                     className="pl-9"
                   />
                 </div>
+                <Button variant="outline" onClick={handleExportPayouts} disabled={!filteredPayouts?.length}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
               </div>
 
               {payoutsLoading ? (
@@ -229,7 +285,7 @@ export default function AdminCommissions() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredPayouts?.map((payout) => (
+                        paginatedPayouts?.map((payout) => (
                           <TableRow key={payout.id}>
                             <TableCell>
                               <div className="flex items-center gap-2">

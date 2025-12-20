@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Search, Box, Plus, TrendingUp, TrendingDown, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Search, Box, Plus, TrendingUp, TrendingDown, RotateCcw, AlertTriangle, Download } from 'lucide-react';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/shared/DataPagination';
+import { exportToCSV, formatDate } from '@/lib/exportUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -68,6 +71,55 @@ export default function AdminInventory() {
 
   const lowStockItems = filteredInventory?.filter(inv => inv.quantity <= inv.min_stock);
 
+  const {
+    paginatedData: paginatedInventory,
+    currentPage: invPage,
+    totalPages: invTotalPages,
+    goToPage: goToInvPage,
+    startIndex: invStartIndex,
+    endIndex: invEndIndex,
+    totalItems: invTotalItems,
+  } = usePagination({ data: filteredInventory, itemsPerPage: 10 });
+
+  const {
+    paginatedData: paginatedMovements,
+    currentPage: movPage,
+    totalPages: movTotalPages,
+    goToPage: goToMovPage,
+    startIndex: movStartIndex,
+    endIndex: movEndIndex,
+    totalItems: movTotalItems,
+  } = usePagination({ data: movements, itemsPerPage: 10 });
+
+  const handleExportInventory = () => {
+    if (!filteredInventory) return;
+    const data = filteredInventory.map(inv => ({
+      SKU: inv.product?.sku || '-',
+      Produk: inv.product?.name || '-',
+      Stok: inv.quantity,
+      'Min Stok': inv.min_stock,
+      Reserved: inv.reserved_quantity,
+      Available: inv.quantity - inv.reserved_quantity,
+    }));
+    exportToCSV(data, `inventori-${formatDate(new Date())}`);
+  };
+
+  const handleExportMovements = () => {
+    if (!movements) return;
+    const data = movements.map(mov => ({
+      Tanggal: formatDate(new Date(mov.created_at)),
+      SKU: mov.product?.sku || '-',
+      Produk: mov.product?.name || '-',
+      Tipe: mov.movement_type === 'in' ? 'Masuk' : mov.movement_type === 'out' ? 'Keluar' : 'Adjustment',
+      Qty: mov.quantity,
+      Sebelum: mov.quantity_before,
+      Sesudah: mov.quantity_after,
+      Alasan: mov.reason,
+      'Unit Cost': mov.unit_cost || 0,
+    }));
+    exportToCSV(data, `mutasi-stok-${formatDate(new Date())}`);
+  };
+
   const handleOpenMovement = (productId?: string) => {
     setMovementData({
       product_id: productId || '',
@@ -132,10 +184,16 @@ export default function AdminInventory() {
             className="pl-9"
           />
         </div>
-        <Button onClick={() => handleOpenMovement()}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Mutasi
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportInventory} disabled={!filteredInventory?.length}>
+            <Download className="mr-2 h-4 w-4" />
+            Export Stok
+          </Button>
+          <Button onClick={() => handleOpenMovement()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Mutasi
+          </Button>
+        </div>
       </div>
 
       {/* Low Stock Alert */}
@@ -195,7 +253,7 @@ export default function AdminInventory() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredInventory?.map((inv) => {
+                      {paginatedInventory?.map((inv) => {
                         const isLowStock = inv.quantity <= inv.min_stock;
                         const available = inv.quantity - inv.reserved_quantity;
 
@@ -249,17 +307,31 @@ export default function AdminInventory() {
                   </Table>
                 </div>
               )}
+              {invTotalPages > 1 && (
+                <DataPagination
+                  currentPage={invPage}
+                  totalPages={invTotalPages}
+                  onPageChange={goToInvPage}
+                  startIndex={invStartIndex}
+                  endIndex={invEndIndex}
+                  totalItems={invTotalItems}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="movements">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <RotateCcw className="h-5 w-5" />
                 Riwayat Mutasi
               </CardTitle>
+              <Button variant="outline" size="sm" onClick={handleExportMovements} disabled={!movements?.length}>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
             </CardHeader>
             <CardContent>
               {movementsLoading ? (
@@ -284,7 +356,7 @@ export default function AdminInventory() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {movements?.map((mov) => (
+                      {paginatedMovements?.map((mov) => (
                         <TableRow key={mov.id}>
                           <TableCell>
                             {format(new Date(mov.created_at), 'dd MMM yyyy HH:mm', { locale: id })}
@@ -322,6 +394,16 @@ export default function AdminInventory() {
                     </TableBody>
                   </Table>
                 </div>
+              )}
+              {movTotalPages > 1 && (
+                <DataPagination
+                  currentPage={movPage}
+                  totalPages={movTotalPages}
+                  onPageChange={goToMovPage}
+                  startIndex={movStartIndex}
+                  endIndex={movEndIndex}
+                  totalItems={movTotalItems}
+                />
               )}
             </CardContent>
           </Card>

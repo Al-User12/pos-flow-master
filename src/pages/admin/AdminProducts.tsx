@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { Plus, Search, Edit, Trash2, Package, MoreHorizontal } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, MoreHorizontal, Download } from 'lucide-react';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/shared/DataPagination';
+import { ImageUpload } from '@/components/shared/ImageUpload';
+import { exportToCSV, formatCurrency as formatCurrencyUtil, formatDate } from '@/lib/exportUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -94,6 +98,36 @@ export default function AdminProducts() {
     p.sku.toLowerCase().includes(search.toLowerCase())
   );
 
+  const {
+    paginatedData,
+    currentPage,
+    totalPages,
+    goToPage,
+    startIndex,
+    endIndex,
+    totalItems,
+  } = usePagination({ data: filteredProducts, itemsPerPage: 10 });
+
+  const handleExport = () => {
+    if (!filteredProducts) return;
+    const data = filteredProducts.map(p => {
+      const latestPrice = p.prices?.sort((a, b) => 
+        new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime()
+      )[0];
+      return {
+        SKU: p.sku,
+        Nama: p.name,
+        Kategori: p.category?.name || '-',
+        Brand: p.brand?.name || '-',
+        'Harga Jual': latestPrice?.selling_price || 0,
+        HPP: latestPrice?.hpp_average || 0,
+        Stok: p.inventory?.[0]?.quantity || 0,
+        Status: p.is_active ? 'Aktif' : 'Nonaktif',
+      };
+    });
+    exportToCSV(data, `produk-${formatDate(new Date())}`);
+  };
+
   const handleOpenCreate = () => {
     setEditingProduct(null);
     setFormData(initialFormData);
@@ -186,10 +220,16 @@ export default function AdminProducts() {
             className="pl-9"
           />
         </div>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Produk
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={!filteredProducts?.length}>
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+          <Button onClick={handleOpenCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Produk
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -221,7 +261,7 @@ export default function AdminProducts() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProducts?.map((product) => {
+                  {paginatedData?.map((product) => {
                     const latestPrice = product.prices?.sort((a, b) => 
                       new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime()
                     )[0];
@@ -295,6 +335,16 @@ export default function AdminProducts() {
                 </TableBody>
               </Table>
             </div>
+          )}
+          {totalPages > 1 && (
+            <DataPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={goToPage}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              totalItems={totalItems}
+            />
           )}
         </CardContent>
       </Card>
@@ -384,12 +434,13 @@ export default function AdminProducts() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="image_url">URL Gambar</Label>
-              <Input
-                id="image_url"
+              <Label>Gambar Produk</Label>
+              <ImageUpload
                 value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                placeholder="https://example.com/image.jpg"
+                onChange={(url) => setFormData({ ...formData, image_url: url || '' })}
+                bucket="product-images"
+                folder="products"
+                aspectRatio="square"
               />
             </div>
 
