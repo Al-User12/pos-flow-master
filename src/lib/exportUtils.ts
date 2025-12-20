@@ -1,32 +1,31 @@
 import { format } from 'date-fns';
 
+// Simple object-based CSV export
 export function exportToCSV<T extends Record<string, any>>(
   data: T[],
-  columns: { key: keyof T; header: string; formatter?: (value: any, row: T) => string }[],
   filename: string
 ) {
   if (data.length === 0) {
     return;
   }
 
-  // Create header row
-  const headers = columns.map((col) => `"${col.header}"`).join(',');
+  // Get headers from first object keys
+  const headers = Object.keys(data[0]);
+  const headerRow = headers.map((h) => `"${h}"`).join(',');
 
   // Create data rows
   const rows = data.map((row) =>
-    columns
-      .map((col) => {
-        const value = row[col.key];
-        const formatted = col.formatter ? col.formatter(value, row) : value;
-        // Escape quotes and wrap in quotes
-        const escaped = String(formatted ?? '').replace(/"/g, '""');
+    headers
+      .map((key) => {
+        const value = row[key];
+        const escaped = String(value ?? '').replace(/"/g, '""');
         return `"${escaped}"`;
       })
       .join(',')
   );
 
   // Combine headers and rows
-  const csv = [headers, ...rows].join('\n');
+  const csv = [headerRow, ...rows].join('\n');
 
   // Create blob and download
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });

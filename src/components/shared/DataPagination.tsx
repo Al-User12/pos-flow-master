@@ -16,7 +16,7 @@ interface DataPaginationProps {
   startIndex: number;
   endIndex: number;
   totalItems: number;
-  itemsPerPage: number;
+  itemsPerPage?: number;
   onItemsPerPageChange?: (count: number) => void;
   showItemsPerPage?: boolean;
 }
@@ -28,9 +28,9 @@ export function DataPagination({
   startIndex,
   endIndex,
   totalItems,
-  itemsPerPage,
+  itemsPerPage = 10,
   onItemsPerPageChange,
-  showItemsPerPage = true,
+  showItemsPerPage = false,
 }: DataPaginationProps) {
   if (totalPages <= 1 && totalItems <= 10) return null;
 

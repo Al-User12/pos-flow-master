@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAdminCustomers, useUpdateCustomer } from '@/hooks/useAdmin';
-import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Eye, Users, UserCheck, Wallet, Phone, CreditCard, Building } from 'lucide-react';
+import { Search, Eye, Users, UserCheck, Wallet, Phone, CreditCard, Building, Download } from 'lucide-react';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/shared/DataPagination';
+import { exportToCSV, formatCurrency as formatCurrencyUtil, formatDate } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -25,6 +27,31 @@ export default function AdminCustomers() {
     customer.phone?.includes(searchQuery) ||
     customer.nik.includes(searchQuery)
   );
+
+  const {
+    paginatedData,
+    currentPage,
+    totalPages,
+    goToPage,
+    startIndex,
+    endIndex,
+    totalItems,
+  } = usePagination({ data: filteredCustomers, itemsPerPage: 10 });
+
+  const handleExport = () => {
+    if (!filteredCustomers) return;
+    const data = filteredCustomers.map(c => ({
+      Nama: c.full_name,
+      NIK: c.nik,
+      Telepon: c.phone || '-',
+      Domisili: c.domicile?.name || '-',
+      'Saldo Komisi': Number(c.commission_balance),
+      'Komisi Pending': Number(c.commission_pending),
+      Terverifikasi: c.is_verified ? 'Ya' : 'Tidak',
+      'Tgl Bergabung': formatDate(new Date(c.created_at)),
+    }));
+    exportToCSV(data, `pelanggan-${formatDate(new Date())}`);
+  };
 
   const handleToggleVerified = async (customerId: string, isVerified: boolean) => {
     try {
@@ -97,6 +124,10 @@ export default function AdminCustomers() {
                   className="pl-9"
                 />
               </div>
+              <Button variant="outline" onClick={handleExport} disabled={!filteredCustomers?.length}>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
             </div>
 
             {isLoading ? (
@@ -126,7 +157,7 @@ export default function AdminCustomers() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredCustomers?.map((customer) => (
+                      paginatedData?.map((customer) => (
                         <TableRow key={customer.id}>
                           <TableCell>
                             <div>
@@ -257,6 +288,16 @@ export default function AdminCustomers() {
                   </TableBody>
                 </Table>
               </div>
+            )}
+            {totalPages > 1 && (
+              <DataPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={goToPage}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                totalItems={totalItems}
+              />
             )}
           </CardContent>
         </Card>

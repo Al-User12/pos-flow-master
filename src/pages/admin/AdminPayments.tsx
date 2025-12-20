@@ -8,8 +8,12 @@ import {
   Search,
   Filter,
   ExternalLink,
-  Loader2
+  Loader2,
+  Download
 } from 'lucide-react';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/shared/DataPagination';
+import { exportToCSV, formatDate as formatDateUtil } from '@/lib/exportUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -180,6 +184,31 @@ export default function AdminPayments() {
     );
   });
 
+  const {
+    paginatedData,
+    currentPage,
+    totalPages,
+    goToPage,
+    startIndex,
+    endIndex,
+    totalItems,
+  } = usePagination({ data: filteredPayments, itemsPerPage: 10 });
+
+  const handleExport = () => {
+    if (!filteredPayments) return;
+    const data = filteredPayments.map(p => ({
+      'No Order': p.orders?.order_number || '-',
+      Buyer: p.orders?.buyer_profiles?.full_name || '-',
+      'Jumlah Transfer': p.amount,
+      'Total Order': p.orders?.total || 0,
+      Bank: p.bank_name || '-',
+      'No Rekening': p.account_number || '-',
+      Status: p.is_confirmed ? 'Dikonfirmasi' : 'Menunggu',
+      'Tgl Upload': formatDate(p.created_at),
+    }));
+    exportToCSV(data, `pembayaran-${formatDateUtil(new Date())}`);
+  };
+
   const pendingCount = payments?.filter(p => !p.is_confirmed).length || 0;
 
   return (
@@ -274,6 +303,10 @@ export default function AdminPayments() {
             <SelectItem value="confirmed">Sudah Dikonfirmasi</SelectItem>
           </SelectContent>
         </Select>
+        <Button variant="outline" onClick={handleExport} disabled={!filteredPayments?.length}>
+          <Download className="w-4 h-4 mr-2" />
+          Export
+        </Button>
       </div>
 
       {/* Payments List */}
@@ -306,7 +339,7 @@ export default function AdminPayments() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {filteredPayments?.map((payment) => (
+          {paginatedData?.map((payment) => (
             <Card 
               key={payment.id} 
               className={`cursor-pointer hover:shadow-md transition-shadow ${
