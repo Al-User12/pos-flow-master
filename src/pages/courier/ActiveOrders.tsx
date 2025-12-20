@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Package, MapPin, Phone, Clock, ChevronRight, Loader2, Camera } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Package, MapPin, Phone, ChevronRight, Loader2, Camera, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,9 +7,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { CourierLayout } from '@/components/courier/CourierLayout';
-import { useActiveOrders, useCourierProfile } from '@/hooks/useCourier';
+import { useCourierActiveOrders } from '@/hooks/useCourierData';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
 const statusConfig: Record<string, { label: string; color: string; nextStatus: string; nextLabel: string }> = {
@@ -20,13 +20,39 @@ const statusConfig: Record<string, { label: string; color: string; nextStatus: s
 };
 
 export default function ActiveOrders() {
-  const { data: profile } = useCourierProfile();
-  const { data: orders, isLoading } = useActiveOrders(profile?.id);
+  const { profileId, user } = useAuth();
+  const { data: orders, isLoading } = useCourierActiveOrders();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [podDialogOpen, setPodDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [podNotes, setPodNotes] = useState('');
   const queryClient = useQueryClient();
+
+  // Subscribe to real-time updates for courier's orders
+  useEffect(() => {
+    if (!profileId) return;
+
+    const channel = supabase
+      .channel('courier-active-orders-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `courier_id=eq.${profileId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['courier-active-orders'] });
+          queryClient.invalidateQueries({ queryKey: ['courier-stats'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profileId, queryClient]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -57,17 +83,15 @@ export default function ActiveOrders() {
 
       if (error) throw error;
 
-      toast({
-        title: 'Status diperbarui',
+      toast.success('Status diperbarui', {
         description: `Order berhasil diperbarui ke status: ${statusConfig[newStatus]?.label}`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ['active-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['courier-active-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['courier-stats'] });
     } catch (error: any) {
-      toast({
-        title: 'Gagal update status',
+      toast.error('Gagal update status', {
         description: error.message,
-        variant: 'destructive',
       });
     } finally {
       setUpdatingId(null);
@@ -97,30 +121,35 @@ export default function ActiveOrders() {
           order_id: selectedOrder.id,
           photo_url: 'placeholder', // Would be actual photo upload
           notes: podNotes || null,
-          created_by: profile?.user_id,
-        } as any);
+          created_by: user?.id,
+        });
 
       if (podError) throw podError;
 
-      toast({
-        title: 'Pengiriman Selesai!',
+      toast.success('Pengiriman Selesai!', {
         description: 'Order berhasil diantarkan',
       });
 
       setPodDialogOpen(false);
       setSelectedOrder(null);
       setPodNotes('');
-      queryClient.invalidateQueries({ queryKey: ['active-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['order-history'] });
+      queryClient.invalidateQueries({ queryKey: ['courier-active-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['courier-order-history'] });
+      queryClient.invalidateQueries({ queryKey: ['courier-stats'] });
     } catch (error: any) {
-      toast({
-        title: 'Gagal menyelesaikan order',
+      toast.error('Gagal menyelesaikan order', {
         description: error.message,
-        variant: 'destructive',
       });
     } finally {
       setUpdatingId(null);
     }
+  };
+
+  const openMaps = (address: any) => {
+    const query = encodeURIComponent(
+      `${address?.address || ''}, ${(address?.domiciles as any)?.name || ''}`
+    );
+    window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
   };
 
   return (
@@ -182,6 +211,18 @@ export default function ActiveOrders() {
                         {address?.phone}
                       </a>
                     </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openMaps(address);
+                      }}
+                    >
+                      <Navigation className="w-4 h-4 mr-2" />
+                      Buka di Maps
+                    </Button>
                   </div>
 
                   {/* Items */}
