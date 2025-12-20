@@ -529,3 +529,79 @@ export function useProductPriceHistory(productId: string) {
     enabled: !!productId,
   });
 }
+
+// Commissions
+export function useAdminCommissions() {
+  return useQuery({
+    queryKey: ['admin-commissions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('referral_commissions')
+        .select(`
+          *,
+          referrer:buyer_profiles!referral_commissions_referrer_id_fkey(id, full_name),
+          buyer:buyer_profiles!referral_commissions_buyer_id_fkey(id, full_name),
+          order:orders(id, order_number)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// Payouts
+export function useAdminPayouts() {
+  return useQuery({
+    queryKey: ['admin-payouts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('payout_requests')
+        .select(`
+          *,
+          buyer:buyer_profiles!payout_requests_buyer_id_fkey(id, full_name, phone)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useUpdatePayoutStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, status, rejection_reason }: {
+      id: string;
+      status: 'approved' | 'rejected' | 'completed';
+      rejection_reason?: string;
+    }) => {
+      const updateData: Record<string, unknown> = { status };
+      
+      if (status === 'approved') {
+        updateData.approved_at = new Date().toISOString();
+      } else if (status === 'rejected') {
+        updateData.rejection_reason = rejection_reason;
+      } else if (status === 'completed') {
+        updateData.completed_at = new Date().toISOString();
+      }
+
+      const { data, error } = await supabase
+        .from('payout_requests')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-payouts'] });
+    },
+  });
+}
