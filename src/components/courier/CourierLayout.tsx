@@ -2,13 +2,14 @@ import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Package, ClipboardList, History, User, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CourierNotifications } from './CourierNotifications';
 
 interface CourierLayoutProps {
   children: ReactNode;
 }
 
 const navItems = [
-  { path: '/courier', icon: Package, label: 'Tersedia' },
+  { path: '/courier', icon: Package, label: 'Dashboard' },
   { path: '/courier/active', icon: ClipboardList, label: 'Aktif' },
   { path: '/courier/history', icon: History, label: 'Riwayat' },
   { path: '/courier/profile', icon: User, label: 'Profil' },
@@ -28,6 +29,7 @@ export function CourierLayout({ children }: CourierLayoutProps) {
             </div>
             <span className="font-bold text-secondary-foreground">Osher Kurir</span>
           </div>
+          <CourierNotifications />
         </div>
       </header>
 
