@@ -12,7 +12,7 @@ const Index = () => {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center">
               <Store className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">RetailPOS</span>
+            <span className="text-xl font-bold text-foreground">Osher Shop</span>
           </div>
           <Link to="/auth">
             <Button variant="default" size="sm" className="gap-2">
@@ -27,17 +27,17 @@ const Index = () => {
         <div className="max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
             <Package className="w-4 h-4" />
-            Solusi POS Modern untuk Retail & FMCG
+            Belanja Mudah & Terpercaya
           </div>
           <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
-            Kelola Toko Anda dengan{" "}
+            Selamat Datang di{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary-600">
-              Lebih Mudah
+              Osher Shop
             </span>
           </h1>
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Sistem Point of Sale lengkap dengan manajemen inventory, tracking pengiriman, 
-            dan program referral untuk mengembangkan bisnis Anda.
+            Belanja kebutuhan harian Anda dengan mudah. Tracking pengiriman real-time 
+            dan dapatkan komisi dari setiap referral.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/auth?mode=register">
@@ -57,9 +57,9 @@ const Index = () => {
       {/* Features Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-foreground mb-4">Fitur Lengkap</h2>
+          <h2 className="text-3xl font-bold text-foreground mb-4">Kenapa Osher Shop?</h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Semua yang Anda butuhkan untuk mengelola bisnis retail dalam satu platform
+            Kemudahan berbelanja dengan layanan terbaik untuk Anda
           </p>
         </div>
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -68,9 +68,9 @@ const Index = () => {
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
               <ShoppingCart className="w-6 h-6 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">Untuk Pembeli</h3>
+            <h3 className="text-xl font-semibold text-foreground mb-2">Belanja Mudah</h3>
             <p className="text-muted-foreground text-sm mb-4">
-              Belanja mudah dengan katalog lengkap, tracking order real-time, dan program referral untuk mendapatkan komisi.
+              Katalog produk lengkap, tracking order real-time, dan program referral untuk komisi.
             </p>
             <ul className="text-sm text-muted-foreground space-y-2">
               <li className="flex items-center gap-2">
@@ -88,19 +88,19 @@ const Index = () => {
             </ul>
           </div>
 
-          {/* Kurir Card */}
+          {/* Pengiriman Card */}
           <div className="group p-6 rounded-2xl bg-card border border-border hover:border-secondary/50 hover:shadow-lg hover:shadow-secondary/5 transition-all duration-300">
             <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-4 group-hover:bg-secondary/20 transition-colors">
               <Truck className="w-6 h-6 text-secondary-foreground" />
             </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">Untuk Pengirim</h3>
+            <h3 className="text-xl font-semibold text-foreground mb-2">Pengiriman Cepat</h3>
             <p className="text-muted-foreground text-sm mb-4">
-              Terima order, update status pengiriman, dan upload bukti pengantaran dengan mudah.
+              Kurir terpercaya dengan update status pengiriman secara real-time.
             </p>
             <ul className="text-sm text-muted-foreground space-y-2">
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                Terima order fleksibel
+                Kurir profesional
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
@@ -108,59 +108,58 @@ const Index = () => {
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                Proof of Delivery
+                Bukti pengantaran
               </li>
             </ul>
           </div>
 
-          {/* Admin Card */}
+          {/* Terpercaya Card */}
           <div className="group p-6 rounded-2xl bg-card border border-border hover:border-accent/50 hover:shadow-lg hover:shadow-accent/5 transition-all duration-300">
             <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
-              <Store className="w-6 h-6 text-accent-foreground" />
+              <Shield className="w-6 h-6 text-accent-foreground" />
             </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">Untuk Admin</h3>
+            <h3 className="text-xl font-semibold text-foreground mb-2">Aman & Terpercaya</h3>
             <p className="text-muted-foreground text-sm mb-4">
-              Kelola produk, inventory, order, keuangan, dan laporan dalam satu dashboard.
+              Transaksi aman dengan konfirmasi pembayaran dan audit trail lengkap.
             </p>
             <ul className="text-sm text-muted-foreground space-y-2">
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                Manajemen inventory & HPP
+                Pembayaran aman
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                Konfirmasi pembayaran
+                Konfirmasi admin
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                Laporan & audit lengkap
+                Riwayat transaksi
               </li>
             </ul>
           </div>
         </div>
       </section>
 
-      {/* Trust Section */}
+      {/* CTA Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto p-8 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0">
-              <Shield className="w-8 h-8 text-primary" />
+              <Users className="w-8 h-8 text-primary" />
             </div>
             <div className="text-center md:text-left">
               <h3 className="text-xl font-semibold text-foreground mb-2">
-                Aman & Terpercaya
+                Bergabung Sekarang
               </h3>
               <p className="text-muted-foreground">
-                Data Anda dilindungi dengan enkripsi tingkat enterprise. Semua transaksi tercatat 
-                dalam audit trail untuk transparansi penuh.
+                Daftar gratis dan mulai berbelanja dengan berbagai kemudahan di Osher Shop.
               </p>
             </div>
             <div className="shrink-0">
               <Link to="/auth?mode=register">
                 <Button className="gap-2">
                   <Users className="w-4 h-4" />
-                  Mulai Gratis
+                  Daftar Gratis
                 </Button>
               </Link>
             </div>
@@ -176,10 +175,10 @@ const Index = () => {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center">
                 <Store className="w-4 h-4 text-primary-foreground" />
               </div>
-              <span className="font-semibold text-foreground">RetailPOS</span>
+              <span className="font-semibold text-foreground">Osher Shop</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 RetailPOS. Solusi POS Modern untuk Bisnis Anda.
+              © 2024 Osher Shop. Belanja Mudah & Terpercaya.
             </p>
           </div>
         </div>
