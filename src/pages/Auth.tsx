@@ -48,7 +48,7 @@ export default function Auth() {
             <div className="h-10 w-10 rounded-lg bg-primary-foreground/20 flex items-center justify-center">
               <ShoppingBag className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-primary-foreground">RetailPOS</span>
+            <span className="text-2xl font-bold text-primary-foreground">Osher Shop</span>
           </div>
         </div>
 
@@ -96,7 +96,7 @@ export default function Auth() {
         </div>
 
         <p className="text-sm text-primary-foreground/60">
-          © 2024 RetailPOS. All rights reserved.
+          © 2024 Osher Shop. All rights reserved.
         </p>
       </div>
 
@@ -108,7 +108,7 @@ export default function Auth() {
             <div className="h-10 w-10 rounded-lg gradient-primary flex items-center justify-center">
               <ShoppingBag className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-foreground">RetailPOS</span>
+            <span className="text-2xl font-bold text-foreground">Osher Shop</span>
           </div>
 
           {mode === 'login' ? (
