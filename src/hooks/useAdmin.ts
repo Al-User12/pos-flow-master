@@ -478,3 +478,54 @@ export function useAdminDashboardStats() {
     },
   });
 }
+
+// Product Prices
+export function useUpdateProductPrice() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (priceData: {
+      product_id: string;
+      selling_price: number;
+      hpp_average: number;
+      het?: number;
+    }) => {
+      const { data, error } = await supabase
+        .from('product_prices')
+        .insert({
+          product_id: priceData.product_id,
+          selling_price: priceData.selling_price,
+          hpp_average: priceData.hpp_average,
+          het: priceData.het,
+          effective_date: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['product-price-history'] });
+    },
+  });
+}
+
+export function useProductPriceHistory(productId: string) {
+  return useQuery({
+    queryKey: ['product-price-history', productId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_prices')
+        .select('*')
+        .eq('product_id', productId)
+        .order('effective_date', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!productId,
+  });
+}
