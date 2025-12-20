@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, Eye, Truck, ShoppingCart, Filter } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Search, Eye, Truck, ShoppingCart, Filter, Download, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,16 +33,13 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Database } from '@/integrations/supabase/types';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/shared/DataPagination';
+import { Invoice } from '@/components/shared/Invoice';
+import { exportToCSV, formatCurrency, formatDate } from '@/lib/exportUtils';
+import { useReactToPrint } from 'react-to-print';
 
 type OrderStatus = Database['public']['Enums']['order_status'];
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-  }).format(value);
-}
 
 const statusColors: Record<string, string> = {
   new: 'bg-info text-info-foreground',
@@ -83,11 +80,12 @@ export default function AdminOrders() {
   const { data: orders, isLoading } = useAdminOrders(statusFilter === 'all' ? undefined : statusFilter);
   const { data: couriers } = useAdminCouriers();
   const updateStatus = useUpdateOrderStatus();
+  const invoiceRef = useRef<HTMLDivElement>(null);
 
   const [search, setSearch] = useState('');
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<typeof orders[0] | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<typeof orders extends (infer T)[] ? T : never | null>(null);
   const [selectedCourier, setSelectedCourier] = useState('');
   const [newStatus, setNewStatus] = useState<OrderStatus>('new');
 
@@ -96,12 +94,46 @@ export default function AdminOrders() {
     o.buyer?.full_name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleViewDetail = (order: typeof orders[0]) => {
+  const {
+    currentPage,
+    totalPages,
+    paginatedData,
+    goToPage,
+    itemsPerPage,
+    setItemsPerPage,
+    startIndex,
+    endIndex,
+    totalItems,
+  } = usePagination({ data: filteredOrders, itemsPerPage: 15 });
+
+  const handlePrint = useReactToPrint({
+    contentRef: invoiceRef,
+    documentTitle: `Invoice-${selectedOrder?.order_number || 'order'}`,
+  });
+
+  const handleExport = () => {
+    if (!filteredOrders) return;
+    exportToCSV(
+      filteredOrders,
+      [
+        { key: 'order_number', header: 'No. Pesanan' },
+        { key: 'buyer', header: 'Pembeli', formatter: (v) => v?.full_name || '-' },
+        { key: 'created_at', header: 'Tanggal', formatter: (v) => formatDate(v) },
+        { key: 'total', header: 'Total', formatter: (v) => formatCurrency(Number(v)) },
+        { key: 'status', header: 'Status', formatter: (v) => statusLabels[v] || v },
+        { key: 'courier', header: 'Kurir', formatter: (v) => v?.full_name || '-' },
+      ],
+      'orders'
+    );
+    toast({ title: 'Export berhasil', description: 'File CSV berhasil diunduh' });
+  };
+
+  const handleViewDetail = (order: typeof orders extends (infer T)[] ? T : never) => {
     setSelectedOrder(order);
     setDetailDialogOpen(true);
   };
 
-  const handleOpenAssign = (order: typeof orders[0]) => {
+  const handleOpenAssign = (order: typeof orders extends (infer T)[] ? T : never) => {
     setSelectedOrder(order);
     setSelectedCourier(order.courier_id || '');
     setNewStatus(order.status);
@@ -155,6 +187,10 @@ export default function AdminOrders() {
             </SelectContent>
           </Select>
         </div>
+        <Button variant="outline" onClick={handleExport} disabled={!filteredOrders?.length}>
+          <Download className="mr-2 h-4 w-4" />
+          Export CSV
+        </Button>
       </div>
 
       <Card>
@@ -162,6 +198,9 @@ export default function AdminOrders() {
           <CardTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
             Daftar Pesanan
+            {totalItems > 0 && (
+              <Badge variant="secondary" className="ml-2">{totalItems}</Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -172,66 +211,78 @@ export default function AdminOrders() {
               ))}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>No. Pesanan</TableHead>
-                    <TableHead>Pembeli</TableHead>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Kurir</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders?.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{order.buyer?.full_name || '-'}</p>
-                          <p className="text-xs text-muted-foreground">{order.buyer?.phone}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(order.created_at), 'dd MMM yyyy HH:mm', { locale: id })}
-                      </TableCell>
-                      <TableCell className="font-semibold">
-                        {formatCurrency(Number(order.total))}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={statusColors[order.status]}>
-                          {statusLabels[order.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {order.courier?.full_name || '-'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewDetail(order)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenAssign(order)}
-                          >
-                            <Truck className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>No. Pesanan</TableHead>
+                      <TableHead>Pembeli</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Kurir</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedData?.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{order.buyer?.full_name || '-'}</p>
+                            <p className="text-xs text-muted-foreground">{order.buyer?.phone}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(order.created_at), 'dd MMM yyyy HH:mm', { locale: id })}
+                        </TableCell>
+                        <TableCell className="font-semibold">
+                          {formatCurrency(Number(order.total))}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={statusColors[order.status]}>
+                            {statusLabels[order.status]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {order.courier?.full_name || '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewDetail(order)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenAssign(order)}
+                            >
+                              <Truck className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <DataPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={goToPage}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onItemsPerPageChange={setItemsPerPage}
+              />
+            </>
           )}
         </CardContent>
       </Card>
@@ -240,7 +291,13 @@ export default function AdminOrders() {
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Detail Pesanan {selectedOrder?.order_number}</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              Detail Pesanan {selectedOrder?.order_number}
+              <Button variant="outline" size="sm" onClick={() => handlePrint()}>
+                <Printer className="mr-2 h-4 w-4" />
+                Cetak Invoice
+              </Button>
+            </DialogTitle>
             <DialogDescription>
               {selectedOrder && format(new Date(selectedOrder.created_at), 'dd MMMM yyyy HH:mm', { locale: id })}
             </DialogDescription>
@@ -284,7 +341,7 @@ export default function AdminOrders() {
               <div>
                 <h4 className="font-semibold mb-2">Item Pesanan</h4>
                 <div className="space-y-2">
-                  {selectedOrder.order_items?.map((item) => (
+                  {selectedOrder.order_items?.map((item: any) => (
                     <div key={item.id} className="flex justify-between items-center bg-muted/50 rounded-lg p-3">
                       <div className="flex items-center gap-3">
                         {item.product?.image_url ? (
@@ -327,6 +384,16 @@ export default function AdminOrders() {
                 </div>
               </div>
 
+              {/* Notes */}
+              {selectedOrder.notes && (
+                <div>
+                  <h4 className="font-semibold mb-2">Catatan</h4>
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <p className="text-sm">{selectedOrder.notes}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Courier Info */}
               {selectedOrder.courier && (
                 <div>
@@ -337,6 +404,25 @@ export default function AdminOrders() {
                   </div>
                 </div>
               )}
+
+              {/* Hidden Invoice for printing */}
+              <div className="hidden">
+                <Invoice
+                  ref={invoiceRef}
+                  orderNumber={selectedOrder.order_number}
+                  createdAt={selectedOrder.created_at}
+                  status={selectedOrder.status}
+                  buyerName={selectedOrder.buyer?.full_name || '-'}
+                  address={selectedOrder.order_address?.[0] as any}
+                  items={selectedOrder.order_items || []}
+                  subtotal={Number(selectedOrder.subtotal)}
+                  shippingCost={Number(selectedOrder.shipping_cost)}
+                  adminFee={Number(selectedOrder.admin_fee)}
+                  total={Number(selectedOrder.total)}
+                  notes={selectedOrder.notes || undefined}
+                  courierName={selectedOrder.courier?.full_name}
+                />
+              </div>
             </div>
           )}
         </DialogContent>
