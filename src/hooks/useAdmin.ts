@@ -776,4 +776,74 @@ export function useAdminReports(period: '7d' | '30d' | 'month') {
   });
 }
 
+// Audit Logs
+export function useAdminAuditLogs() {
+  return useQuery({
+    queryKey: ['admin-audit-logs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500);
+
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// System Settings
+export function useAdminSettings() {
+  return useQuery({
+    queryKey: ['admin-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('*')
+        .order('key');
+
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useUpdateSetting() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ key, value, description, isNew }: {
+      key: string;
+      value: string;
+      description?: string;
+      isNew?: boolean;
+    }) => {
+      if (isNew) {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .insert({ key, value, description })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      } else {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .update({ value, updated_at: new Date().toISOString() })
+          .eq('key', key)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
+    },
+  });
+}
+
 import { subDays, startOfMonth, eachDayOfInterval, format } from 'date-fns';
