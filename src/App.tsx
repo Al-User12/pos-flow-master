@@ -1,9 +1,11 @@
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
+import { AdminRoute, BuyerRoute, CourierRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import BuyerDashboard from "./pages/buyer/BuyerDashboard";
@@ -40,30 +42,40 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            {/* Buyer Routes */}
-            <Route path="/buyer" element={<BuyerDashboard />} />
-            <Route path="/buyer/catalog" element={<Catalog />} />
-            <Route path="/buyer/cart" element={<Cart />} />
-            <Route path="/buyer/checkout" element={<Checkout />} />
-            <Route path="/buyer/orders" element={<Orders />} />
-            <Route path="/buyer/profile" element={<BuyerProfile />} />
-            {/* Courier Routes */}
-            <Route path="/courier" element={<CourierDashboard />} />
-            <Route path="/courier/active" element={<ActiveOrders />} />
-            <Route path="/courier/history" element={<OrderHistory />} />
-            <Route path="/courier/profile" element={<CourierProfile />} />
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminOverview />} />
-              <Route path="products" element={<AdminProducts />} />
-              <Route path="orders" element={<AdminOrders />} />
-              <Route path="inventory" element={<AdminInventory />} />
-              <Route path="pricing" element={<AdminPricing />} />
-              <Route path="couriers" element={<AdminCouriers />} />
-              <Route path="customers" element={<AdminCustomers />} />
-              <Route path="commissions" element={<AdminCommissions />} />
-              <Route path="reports" element={<AdminReports />} />
+            
+            {/* Protected Buyer Routes */}
+            <Route element={<BuyerRoute />}>
+              <Route path="/buyer" element={<BuyerDashboard />} />
+              <Route path="/buyer/catalog" element={<Catalog />} />
+              <Route path="/buyer/cart" element={<Cart />} />
+              <Route path="/buyer/checkout" element={<Checkout />} />
+              <Route path="/buyer/orders" element={<Orders />} />
+              <Route path="/buyer/profile" element={<BuyerProfile />} />
             </Route>
+            
+            {/* Protected Courier Routes */}
+            <Route element={<CourierRoute />}>
+              <Route path="/courier" element={<CourierDashboard />} />
+              <Route path="/courier/active" element={<ActiveOrders />} />
+              <Route path="/courier/history" element={<OrderHistory />} />
+              <Route path="/courier/profile" element={<CourierProfile />} />
+            </Route>
+            
+            {/* Protected Admin Routes */}
+            <Route element={<AdminRoute />}>
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminOverview />} />
+                <Route path="products" element={<AdminProducts />} />
+                <Route path="orders" element={<AdminOrders />} />
+                <Route path="inventory" element={<AdminInventory />} />
+                <Route path="pricing" element={<AdminPricing />} />
+                <Route path="couriers" element={<AdminCouriers />} />
+                <Route path="customers" element={<AdminCustomers />} />
+                <Route path="commissions" element={<AdminCommissions />} />
+                <Route path="reports" element={<AdminReports />} />
+              </Route>
+            </Route>
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
