@@ -16,7 +16,13 @@ import CourierDashboard from "./pages/courier/CourierDashboard";
 import ActiveOrders from "./pages/courier/ActiveOrders";
 import OrderHistory from "./pages/courier/OrderHistory";
 import CourierProfile from "./pages/courier/CourierProfile";
-import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminOverview from "./pages/admin/AdminOverview";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminInventory from "./pages/admin/AdminInventory";
+import AdminCouriers from "./pages/admin/AdminCouriers";
+import AdminCustomers from "./pages/admin/AdminCustomers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,7 +50,14 @@ const App = () => (
             <Route path="/courier/history" element={<OrderHistory />} />
             <Route path="/courier/profile" element={<CourierProfile />} />
             {/* Admin Routes */}
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminOverview />} />
+              <Route path="products" element={<AdminProducts />} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="inventory" element={<AdminInventory />} />
+              <Route path="couriers" element={<AdminCouriers />} />
+              <Route path="customers" element={<AdminCustomers />} />
+            </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
