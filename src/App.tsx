@@ -13,6 +13,7 @@ import Catalog from "./pages/buyer/Catalog";
 import Cart from "./pages/buyer/Cart";
 import Checkout from "./pages/buyer/Checkout";
 import Orders from "./pages/buyer/Orders";
+import OrderDetail from "./pages/buyer/OrderDetail";
 import BuyerProfile from "./pages/buyer/Profile";
 import CourierDashboard from "./pages/courier/CourierDashboard";
 import ActiveOrders from "./pages/courier/ActiveOrders";
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/buyer/cart" element={<Cart />} />
               <Route path="/buyer/checkout" element={<Checkout />} />
               <Route path="/buyer/orders" element={<Orders />} />
+              <Route path="/buyer/orders/:orderId" element={<OrderDetail />} />
               <Route path="/buyer/profile" element={<BuyerProfile />} />
             </Route>
             
