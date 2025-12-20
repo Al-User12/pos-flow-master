@@ -285,12 +285,6 @@ export default function AdminCustomers() {
                                       </div>
                                     )}
 
-                                    {selectedCustomer.referrer && selectedCustomer.referrer.length > 0 && (
-                                      <div className="p-3 rounded-lg bg-muted">
-                                        <p className="text-xs text-muted-foreground">Direferensikan oleh</p>
-                                        <p className="font-medium">{selectedCustomer.referrer[0]?.full_name}</p>
-                                      </div>
-                                    )}
 
                                     <div className="text-sm text-muted-foreground">
                                       Bergabung: {format(new Date(selectedCustomer.created_at), 'dd MMMM yyyy', { locale: idLocale })}

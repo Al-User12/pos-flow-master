@@ -411,13 +411,15 @@ export function useAdminCustomers() {
   return useQuery({
     queryKey: ['admin-customers'],
     queryFn: async () => {
+      // NOTE: Do not embed self-referential "referrer" relationship here.
+      // The backend schema cache may not expose buyer_profiles -> buyer_profiles FK,
+      // which causes PostgREST to return PGRST200 and the whole query fails.
       const { data, error } = await supabase
         .from('buyer_profiles')
         .select(`
           *,
           domicile:domiciles(id, name),
-          bank:banks(id, name),
-          referrer:buyer_profiles!buyer_profiles_referrer_id_fkey(id, full_name)
+          bank:banks(id, name)
         `)
         .order('created_at', { ascending: false });
 
@@ -426,6 +428,7 @@ export function useAdminCustomers() {
     },
   });
 }
+
 
 export function useUpdateCustomer() {
   const queryClient = useQueryClient();
