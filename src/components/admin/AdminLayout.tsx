@@ -15,15 +15,18 @@ import {
   DollarSign,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { OrderNotifications } from './OrderNotifications';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Overview', path: '/admin', description: 'Ringkasan bisnis' },
   { icon: ShoppingCart, label: 'Pesanan', path: '/admin/orders', description: 'Kelola pesanan' },
+  { icon: CreditCard, label: 'Pembayaran', path: '/admin/payments', description: 'Konfirmasi pembayaran' },
   { icon: Package, label: 'Produk', path: '/admin/products', description: 'Kelola produk' },
   { icon: Box, label: 'Inventori', path: '/admin/inventory', description: 'Stok & mutasi' },
   { icon: DollarSign, label: 'Harga & HPP', path: '/admin/pricing', description: 'Kelola harga' },
@@ -136,7 +139,8 @@ export default function AdminLayout() {
               {menuItems.find(item => isActive(item.path))?.label || 'Dashboard'}
             </h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <OrderNotifications />
             <span className="text-sm text-muted-foreground capitalize hidden sm:block">
               {role?.replace('_', ' ')}
             </span>
