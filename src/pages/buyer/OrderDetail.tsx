@@ -326,9 +326,30 @@ export default function OrderDetail() {
           </Card>
         )}
 
-        {/* Cancel Order Button - Show for new or waiting_payment status without payment */}
+        {/* Payment Action - Prominent for unpaid orders */}
         {!payment && (order.status === 'new' || order.status === 'waiting_payment') && (
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Warning Banner */}
+            <Card className="border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                    <Clock className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-amber-800 mb-1">Menunggu Pembayaran</h3>
+                    <p className="text-sm text-amber-700 mb-3">
+                      Segera upload bukti transfer agar pesanan Anda dapat diproses.
+                    </p>
+                    <div className="flex items-center gap-2 p-2 bg-white/80 rounded-lg">
+                      <CreditCard className="w-4 h-4 text-amber-600" />
+                      <span className="font-bold text-lg text-amber-800">{formatPrice(order.total)}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <PaymentUploadForm 
               orderId={order.id} 
               orderTotal={order.total}
