@@ -30,15 +30,14 @@ export function CancelOrderDialog({ orderId, orderNumber, onSuccess }: CancelOrd
   const handleCancel = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ 
-          status: 'cancelled',
-          cancelled_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
+      const { data, error } = await supabase.functions.invoke('buyer-cancel-order', {
+        body: { orderId },
+      });
 
       if (error) throw error;
+      if (!data?.success) {
+        throw new Error(data?.error || 'Gagal membatalkan pesanan');
+      }
 
       toast({
         title: 'Pesanan Dibatalkan',

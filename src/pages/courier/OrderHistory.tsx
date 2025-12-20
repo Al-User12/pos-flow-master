@@ -11,10 +11,10 @@ import { useOrderHistory, useCourierProfile } from '@/hooks/useCourier';
 import { cn } from '@/lib/utils';
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: typeof CheckCircle }> = {
-  delivered: { label: 'Terkirim', color: 'text-green-700', bgColor: 'bg-green-50', icon: CheckCircle },
-  failed: { label: 'Gagal', color: 'text-red-700', bgColor: 'bg-red-50', icon: XCircle },
-  returned: { label: 'Dikembalikan', color: 'text-gray-700', bgColor: 'bg-gray-100', icon: RotateCcw },
-  cancelled: { label: 'Dibatalkan', color: 'text-amber-700', bgColor: 'bg-amber-50', icon: XCircle },
+  delivered: { label: 'Terkirim', color: 'text-primary', bgColor: 'bg-primary/10', icon: CheckCircle },
+  failed: { label: 'Gagal', color: 'text-destructive', bgColor: 'bg-destructive/10', icon: XCircle },
+  returned: { label: 'Dikembalikan', color: 'text-muted-foreground', bgColor: 'bg-muted', icon: RotateCcw },
+  cancelled: { label: 'Dibatalkan', color: 'text-muted-foreground', bgColor: 'bg-muted', icon: XCircle },
 };
 
 export default function OrderHistory() {
