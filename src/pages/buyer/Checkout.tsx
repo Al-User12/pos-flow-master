@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { BuyerLayout } from '@/components/buyer/BuyerLayout';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminBankInfo } from '@/hooks/useSystemSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -36,6 +37,7 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderCreated, setOrderCreated] = useState<{ orderNumber: string; total: number } | null>(null);
   const [copied, setCopied] = useState(false);
+  const { data: bankInfo } = useAdminBankInfo();
 
   const { data: domiciles } = useQuery({
     queryKey: ['domiciles'],
@@ -242,15 +244,15 @@ export default function Checkout() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Bank</span>
-                      <span className="font-medium">BCA</span>
+                      <span className="font-medium">{bankInfo?.admin_bank_name || 'BCA'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">No. Rekening</span>
-                      <span className="font-mono font-medium">1234567890</span>
+                      <span className="font-mono font-medium">{bankInfo?.admin_bank_account || '1234567890'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Atas Nama</span>
-                      <span className="font-medium">Osher Shop</span>
+                      <span className="font-medium">{bankInfo?.admin_bank_holder || 'Osher Shop'}</span>
                     </div>
                   </div>
                 </CardContent>

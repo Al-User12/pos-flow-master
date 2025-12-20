@@ -180,9 +180,8 @@ export default function BuyerProfile() {
   };
 
   const copyReferralCode = () => {
-    if (profile?.id) {
-      const referralCode = profile.id.substring(0, 8).toUpperCase();
-      navigator.clipboard.writeText(referralCode);
+    if (profile?.referral_code) {
+      navigator.clipboard.writeText(profile.referral_code);
       setCopied(true);
       toast({
         title: 'Tersalin!',
@@ -456,7 +455,7 @@ export default function BuyerProfile() {
                   Kode Referral
                 </Badge>
                 <code className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded">
-                  {profile?.id?.substring(0, 8).toUpperCase() || '--------'}
+                  {profile?.referral_code || '--------'}
                 </code>
                 <Button
                   variant="ghost"

@@ -142,6 +142,7 @@ export type Database = {
           is_verified: boolean
           nik: string
           phone: string | null
+          referral_code: string | null
           referrer_id: string | null
           updated_at: string
           user_id: string
@@ -159,6 +160,7 @@ export type Database = {
           is_verified?: boolean
           nik: string
           phone?: string | null
+          referral_code?: string | null
           referrer_id?: string | null
           updated_at?: string
           user_id: string
@@ -176,6 +178,7 @@ export type Database = {
           is_verified?: boolean
           nik?: string
           phone?: string | null
+          referral_code?: string | null
           referrer_id?: string | null
           updated_at?: string
           user_id?: string
@@ -1004,6 +1007,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      deduct_inventory_for_order: {
+        Args: { p_order_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1012,6 +1019,14 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      release_inventory_for_order: {
+        Args: { p_order_id: string }
+        Returns: boolean
+      }
+      reserve_inventory_for_order: {
+        Args: { p_order_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
