@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Package, MapPin, Phone, ChevronRight, Loader2, Camera, Navigation } from 'lucide-react';
+import { Package, MapPin, Phone, ChevronRight, Loader2, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { CourierLayout } from '@/components/courier/CourierLayout';
+import { DeliveryProofUpload } from '@/components/courier/DeliveryProofUpload';
 import { useCourierActiveOrders } from '@/hooks/useCourierData';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,12 +19,11 @@ const statusConfig: Record<string, { label: string; color: string; nextStatus: s
 };
 
 export default function ActiveOrders() {
-  const { profileId, user } = useAuth();
+  const { profileId } = useAuth();
   const { data: orders, isLoading } = useCourierActiveOrders();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [podDialogOpen, setPodDialogOpen] = useState(false);
+  const [proofDialogOpen, setProofDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [podNotes, setPodNotes] = useState('');
   const queryClient = useQueryClient();
 
   // Subscribe to real-time updates for courier's orders
@@ -65,7 +63,7 @@ export default function ActiveOrders() {
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     if (newStatus === 'delivered') {
       setSelectedOrder(orders?.find(o => o.id === orderId));
-      setPodDialogOpen(true);
+      setProofDialogOpen(true);
       return;
     }
 
@@ -98,51 +96,10 @@ export default function ActiveOrders() {
     }
   };
 
-  const handleDelivered = async () => {
-    if (!selectedOrder) return;
-
-    setUpdatingId(selectedOrder.id);
-    try {
-      // Update order status
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({
-          status: 'delivered',
-          delivered_at: new Date().toISOString(),
-        } as any)
-        .eq('id', selectedOrder.id);
-
-      if (orderError) throw orderError;
-
-      // Create delivery proof
-      const { error: podError } = await supabase
-        .from('delivery_proofs')
-        .insert({
-          order_id: selectedOrder.id,
-          photo_url: 'placeholder', // Would be actual photo upload
-          notes: podNotes || null,
-          created_by: user?.id,
-        });
-
-      if (podError) throw podError;
-
-      toast.success('Pengiriman Selesai!', {
-        description: 'Order berhasil diantarkan',
-      });
-
-      setPodDialogOpen(false);
-      setSelectedOrder(null);
-      setPodNotes('');
-      queryClient.invalidateQueries({ queryKey: ['courier-active-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['courier-order-history'] });
-      queryClient.invalidateQueries({ queryKey: ['courier-stats'] });
-    } catch (error: any) {
-      toast.error('Gagal menyelesaikan order', {
-        description: error.message,
-      });
-    } finally {
-      setUpdatingId(null);
-    }
+  const handleDeliverySuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['courier-active-orders'] });
+    queryClient.invalidateQueries({ queryKey: ['courier-order-history'] });
+    queryClient.invalidateQueries({ queryKey: ['courier-stats'] });
   };
 
   const openMaps = (address: any) => {
@@ -259,36 +216,18 @@ export default function ActiveOrders() {
         </div>
       )}
 
-      {/* POD Dialog */}
-      <Dialog open={podDialogOpen} onOpenChange={setPodDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Konfirmasi Pengiriman</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-              <Camera className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">Foto bukti pengiriman</p>
-              <Button variant="outline" size="sm" className="mt-2">
-                Ambil Foto
-              </Button>
-            </div>
-            <Textarea
-              placeholder="Catatan pengiriman (opsional)"
-              value={podNotes}
-              onChange={(e) => setPodNotes(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPodDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button onClick={handleDelivered} disabled={updatingId !== null}>
-              {updatingId ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Konfirmasi Terkirim'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {selectedOrder && (
+        <DeliveryProofUpload
+          orderId={selectedOrder.id}
+          orderNumber={selectedOrder.order_number}
+          isOpen={proofDialogOpen}
+          onClose={() => {
+            setProofDialogOpen(false);
+            setSelectedOrder(null);
+          }}
+          onSuccess={handleDeliverySuccess}
+        />
+      )}
     </CourierLayout>
   );
 }
