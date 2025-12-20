@@ -33,6 +33,7 @@ import AdminAuditLog from "./pages/admin/AdminAuditLog";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminPayments from "./pages/admin/AdminPayments";
 import AdminDeliveryProofs from "./pages/admin/AdminDeliveryProofs";
+import AdminSeeder from "./pages/admin/AdminSeeder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -83,6 +84,7 @@ const App = () => (
                 <Route path="reports" element={<AdminReports />} />
                 <Route path="audit" element={<AdminAuditLog />} />
                 <Route path="settings" element={<AdminSettings />} />
+                <Route path="seeder" element={<AdminSeeder />} />
               </Route>
             </Route>
             

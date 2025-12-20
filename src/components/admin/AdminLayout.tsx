@@ -16,14 +16,14 @@ import {
   Menu,
   X,
   ChevronRight,
-  CreditCard
+  CreditCard,
+  Camera,
+  Database
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { OrderNotifications } from './OrderNotifications';
-
-import { Camera } from 'lucide-react';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Overview', path: '/admin', description: 'Ringkasan bisnis' },
@@ -39,6 +39,7 @@ const menuItems = [
   { icon: BarChart3, label: 'Laporan', path: '/admin/reports', description: 'Analytics' },
   { icon: FileText, label: 'Audit Log', path: '/admin/audit', description: 'Riwayat aktivitas' },
   { icon: Settings, label: 'Pengaturan', path: '/admin/settings', description: 'Konfigurasi sistem' },
+  { icon: Database, label: 'Seed Data', path: '/admin/seeder', description: 'Generate demo data' },
 ];
 
 export default function AdminLayout() {
