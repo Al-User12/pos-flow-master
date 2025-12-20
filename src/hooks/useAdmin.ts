@@ -319,6 +319,65 @@ export function useAdminCouriers() {
   });
 }
 
+export function useCreateCourier() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (courier: {
+      email: string;
+      password: string;
+      full_name: string;
+      phone: string;
+      vehicle_type?: string;
+      vehicle_plate?: string;
+    }) => {
+      // Create user via Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: courier.email,
+        password: courier.password,
+        options: {
+          data: {
+            full_name: courier.full_name,
+          },
+        },
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Failed to create user');
+
+      // Create courier profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('courier_profiles')
+        .insert({
+          user_id: authData.user.id,
+          full_name: courier.full_name,
+          phone: courier.phone,
+          vehicle_type: courier.vehicle_type,
+          vehicle_plate: courier.vehicle_plate,
+        })
+        .select()
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Assign courier role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          role: 'courier',
+        });
+
+      if (roleError) throw roleError;
+
+      return profileData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-couriers'] });
+    },
+  });
+}
+
 export function useUpdateCourier() {
   const queryClient = useQueryClient();
 
@@ -326,6 +385,7 @@ export function useUpdateCourier() {
     mutationFn: async ({ id, ...updates }: {
       id: string;
       is_active?: boolean;
+      full_name?: string;
       phone?: string;
       vehicle_type?: string;
       vehicle_plate?: string;
