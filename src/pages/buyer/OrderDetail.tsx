@@ -11,7 +11,8 @@ import {
   Truck,
   XCircle,
   RotateCcw,
-  AlertCircle
+  AlertCircle,
+  ImageIcon
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { BuyerLayout } from '@/components/buyer/BuyerLayout';
+import { PaymentUploadForm } from '@/components/buyer/PaymentUploadForm';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -85,7 +87,10 @@ export default function OrderDetail() {
             id,
             amount,
             bank_name,
+            account_number,
+            proof_image_url,
             is_confirmed,
+            transfer_date,
             created_at
           ),
           delivery_proofs (
@@ -318,6 +323,14 @@ export default function OrderDetail() {
           </Card>
         )}
 
+        {/* Payment Upload Form - Show for new or waiting_payment status without payment */}
+        {!payment && (order.status === 'new' || order.status === 'waiting_payment') && (
+          <PaymentUploadForm 
+            orderId={order.id} 
+            orderTotal={order.total}
+          />
+        )}
+
         {/* Payment Info */}
         {payment && (
           <Card>
@@ -328,26 +341,57 @@ export default function OrderDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Jumlah</span>
-                  <span className="font-medium">{formatPrice(payment.amount)}</span>
-                </div>
-                {payment.bank_name && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Bank</span>
-                    <span>{payment.bank_name}</span>
+              <div className="space-y-3">
+                {/* Payment Proof Image */}
+                {payment.proof_image_url && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <ImageIcon className="w-4 h-4" />
+                      <span>Bukti Transfer</span>
+                    </div>
+                    <img 
+                      src={payment.proof_image_url} 
+                      alt="Bukti pembayaran" 
+                      className="w-full rounded-lg border"
+                    />
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status</span>
-                  <Badge variant={payment.is_confirmed ? 'default' : 'secondary'}>
-                    {payment.is_confirmed ? 'Terkonfirmasi' : 'Menunggu Konfirmasi'}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tanggal</span>
-                  <span className="text-sm">{formatShortDate(payment.created_at)}</span>
+                
+                <Separator />
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Jumlah</span>
+                    <span className="font-medium">{formatPrice(payment.amount)}</span>
+                  </div>
+                  {payment.bank_name && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bank Tujuan</span>
+                      <span>{payment.bank_name}</span>
+                    </div>
+                  )}
+                  {payment.account_number && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">No. Rekening Pengirim</span>
+                      <span>{payment.account_number}</span>
+                    </div>
+                  )}
+                  {payment.transfer_date && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tanggal Transfer</span>
+                      <span className="text-sm">{formatShortDate(payment.transfer_date)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status</span>
+                    <Badge variant={payment.is_confirmed ? 'default' : 'secondary'}>
+                      {payment.is_confirmed ? 'Terkonfirmasi' : 'Menunggu Konfirmasi'}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Diupload</span>
+                    <span className="text-sm">{formatShortDate(payment.created_at)}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
