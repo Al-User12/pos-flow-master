@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, MapPin, CreditCard, Loader2, Copy, Check } from 'lucide-react';
+import { ArrowLeft, MapPin, CreditCard, Loader2, Copy, Check, Package, Shield, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,19 +19,19 @@ import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 
 const checkoutSchema = z.object({
-  recipient_name: z.string().min(2, 'Nama penerima minimal 2 karakter'),
-  phone: z.string().min(10, 'Nomor telepon tidak valid').max(15),
+  recipient_name: z.string().min(2, 'Nama penerima minimal 2 karakter').max(100),
+  phone: z.string().min(10, 'Nomor telepon tidak valid').max(15).regex(/^[0-9+]+$/, 'Format nomor tidak valid'),
   domicile_id: z.string().min(1, 'Pilih domisili'),
-  address: z.string().min(10, 'Alamat minimal 10 karakter'),
-  landmark: z.string().optional(),
-  notes: z.string().optional(),
+  address: z.string().min(10, 'Alamat minimal 10 karakter').max(500),
+  landmark: z.string().max(200).optional(),
+  notes: z.string().max(500).optional(),
 });
 
 type CheckoutForm = z.infer<typeof checkoutSchema>;
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { items, subtotal, clearCart } = useCart();
+  const { items, subtotal, clearCart, totalItems } = useCart();
   const { user, profileId } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderCreated, setOrderCreated] = useState<{ orderNumber: string; total: number } | null>(null);
@@ -50,7 +50,7 @@ export default function Checkout() {
     },
   });
 
-  const { data: buyerProfile } = useQuery({
+  const { data: buyerProfile, isLoading: profileLoading } = useQuery({
     queryKey: ['buyer-profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
@@ -68,14 +68,28 @@ export default function Checkout() {
   const form = useForm<CheckoutForm>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
-      recipient_name: buyerProfile?.full_name || '',
-      phone: buyerProfile?.phone || '',
-      domicile_id: buyerProfile?.domicile_id || '',
+      recipient_name: '',
+      phone: '',
+      domicile_id: '',
       address: '',
       landmark: '',
       notes: '',
     },
   });
+
+  // Pre-fill form when buyer profile is loaded
+  useEffect(() => {
+    if (buyerProfile) {
+      form.reset({
+        recipient_name: buyerProfile.full_name || '',
+        phone: buyerProfile.phone || '',
+        domicile_id: buyerProfile.domicile_id || '',
+        address: '',
+        landmark: '',
+        notes: '',
+      });
+    }
+  }, [buyerProfile, form]);
 
   const adminFee = 2000;
   const shippingCost = 5000;
@@ -171,61 +185,83 @@ export default function Checkout() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
+    toast({
+      title: 'Tersalin!',
+      description: 'Nomor pesanan berhasil disalin',
+      duration: 2000,
+    });
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Order Success View
   if (orderCreated) {
     return (
       <BuyerLayout>
-        <div className="max-w-md mx-auto py-8">
-          <Card>
-            <CardHeader className="text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Check className="w-8 h-8 text-primary" />
+        <div className="max-w-md mx-auto py-8 animate-fade-in">
+          <Card className="shadow-lg">
+            <CardHeader className="text-center pb-4">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Check className="w-10 h-10 text-primary" />
               </div>
-              <CardTitle>Pesanan Berhasil!</CardTitle>
+              <CardTitle className="text-2xl">Pesanan Berhasil!</CardTitle>
+              <p className="text-muted-foreground text-sm mt-2">
+                Terima kasih telah berbelanja di Osher Shop
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-2">Nomor Pesanan</p>
+              <div className="text-center bg-muted/50 rounded-lg p-4">
+                <p className="text-sm text-muted-foreground mb-1">Nomor Pesanan</p>
                 <div className="flex items-center justify-center gap-2">
-                  <span className="font-mono font-bold text-lg">{orderCreated.orderNumber}</span>
+                  <span className="font-mono font-bold text-xl">{orderCreated.orderNumber}</span>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => copyToClipboard(orderCreated.orderNumber)}
                   >
-                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4" />}
                   </Button>
                 </div>
               </div>
 
               <Separator />
 
-              <div>
-                <p className="text-muted-foreground mb-2 text-center">Total Pembayaran</p>
-                <p className="text-2xl font-bold text-primary text-center">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-1">Total Pembayaran</p>
+                <p className="text-3xl font-bold text-primary">
                   {formatPrice(orderCreated.total)}
                 </p>
               </div>
 
-              <Card className="bg-muted/50">
+              <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
                 <CardContent className="p-4">
-                  <h4 className="font-semibold mb-2">Transfer ke:</h4>
-                  <div className="space-y-1 text-sm">
-                    <p><span className="text-muted-foreground">Bank:</span> BCA</p>
-                    <p><span className="text-muted-foreground">No. Rekening:</span> 1234567890</p>
-                    <p><span className="text-muted-foreground">Atas Nama:</span> Osher Shop</p>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" />
+                    Transfer ke:
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bank</span>
+                      <span className="font-medium">BCA</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">No. Rekening</span>
+                      <span className="font-mono font-medium">1234567890</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Atas Nama</span>
+                      <span className="font-medium">Osher Shop</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <p className="text-sm text-muted-foreground text-center">
-                Setelah transfer, konfirmasi pembayaran melalui halaman pesanan Anda.
-              </p>
+              <div className="flex items-start gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p>Setelah transfer, konfirmasi pembayaran melalui halaman detail pesanan Anda.</p>
+              </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 pt-2">
                 <Button
                   variant="outline"
                   className="flex-1"
@@ -247,6 +283,7 @@ export default function Checkout() {
     );
   }
 
+  // Redirect if cart is empty
   if (items.length === 0) {
     navigate('/buyer/cart');
     return null;
@@ -254,17 +291,17 @@ export default function Checkout() {
 
   return (
     <BuyerLayout>
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto pb-8">
         <Button
           variant="ghost"
-          className="mb-4 gap-2"
+          className="mb-4 gap-2 -ml-2"
           onClick={() => navigate('/buyer/cart')}
         >
           <ArrowLeft className="w-4 h-4" />
           Kembali ke Keranjang
         </Button>
 
-        <h1 className="text-xl font-bold text-foreground mb-4">Checkout</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-6">Checkout</h1>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -272,38 +309,40 @@ export default function Checkout() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
+                  <MapPin className="w-4 h-4 text-primary" />
                   Alamat Pengiriman
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="recipient_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nama Penerima</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nama lengkap penerima" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="recipient_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nama Penerima</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nama lengkap penerima" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>No. Telepon</FormLabel>
-                      <FormControl>
-                        <Input placeholder="08xxxxxxxxxx" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>No. Telepon</FormLabel>
+                        <FormControl>
+                          <Input placeholder="08xxxxxxxxxx" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
@@ -311,7 +350,7 @@ export default function Checkout() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Domisili</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Pilih domisili" />
@@ -320,7 +359,7 @@ export default function Checkout() {
                         <SelectContent>
                           {domiciles?.map((dom) => (
                             <SelectItem key={dom.id} value={dom.id}>
-                              {dom.name}
+                              {dom.name} {dom.city && `- ${dom.city}`}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -339,6 +378,7 @@ export default function Checkout() {
                       <FormControl>
                         <Textarea
                           placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan, kecamatan"
+                          className="min-h-[80px]"
                           {...field}
                         />
                       </FormControl>
@@ -366,9 +406,13 @@ export default function Checkout() {
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Catatan (Opsional)</FormLabel>
+                      <FormLabel>Catatan untuk Kurir (Opsional)</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Catatan untuk kurir..." {...field} />
+                        <Textarea 
+                          placeholder="Instruksi pengiriman khusus..." 
+                          className="min-h-[60px]"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -381,47 +425,60 @@ export default function Checkout() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <CreditCard className="w-4 h-4" />
+                  <Package className="w-4 h-4 text-primary" />
                   Ringkasan Pesanan
+                  <span className="text-xs font-normal text-muted-foreground ml-auto">
+                    {totalItems} item
+                  </span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-48 overflow-y-auto">
                   {items.map((item) => (
                     <div key={item.productId} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {item.name} x{item.quantity}
+                      <span className="text-muted-foreground truncate max-w-[200px]">
+                        {item.name} <span className="text-foreground">x{item.quantity}</span>
                       </span>
-                      <span>{formatPrice(item.price * item.quantity)}</span>
+                      <span className="font-medium shrink-0">{formatPrice(item.price * item.quantity)}</span>
                     </div>
                   ))}
                 </div>
                 <Separator />
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatPrice(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Biaya Admin</span>
-                  <span>{formatPrice(adminFee)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Ongkos Kirim</span>
-                  <span>{formatPrice(shippingCost)}</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{formatPrice(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Truck className="w-3 h-3" />
+                      Ongkos Kirim
+                    </span>
+                    <span>{formatPrice(shippingCost)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Biaya Admin</span>
+                    <span>{formatPrice(adminFee)}</span>
+                  </div>
                 </div>
                 <Separator />
-                <div className="flex justify-between font-bold">
-                  <span>Total</span>
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Total Pembayaran</span>
                   <span className="text-primary">{formatPrice(total)}</span>
                 </div>
               </CardContent>
             </Card>
 
-            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-base shadow-md" 
+              size="lg" 
+              disabled={isSubmitting}
+            >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Memproses...
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Memproses Pesanan...
                 </>
               ) : (
                 `Buat Pesanan - ${formatPrice(total)}`
