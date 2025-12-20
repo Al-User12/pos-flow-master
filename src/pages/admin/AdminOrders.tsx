@@ -35,9 +35,11 @@ import { id } from 'date-fns/locale';
 import { Database } from '@/integrations/supabase/types';
 import { usePagination } from '@/hooks/usePagination';
 import { DataPagination } from '@/components/shared/DataPagination';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { Invoice } from '@/components/shared/Invoice';
 import { exportToCSV, formatCurrency, formatDate } from '@/lib/exportUtils';
 import { useReactToPrint } from 'react-to-print';
+import { DateRange } from 'react-day-picker';
 
 type OrderStatus = Database['public']['Enums']['order_status'];
 
@@ -83,16 +85,26 @@ export default function AdminOrders() {
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const [search, setSearch] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<typeof orders extends (infer T)[] ? T : never | null>(null);
   const [selectedCourier, setSelectedCourier] = useState('');
   const [newStatus, setNewStatus] = useState<OrderStatus>('new');
 
-  const filteredOrders = orders?.filter(o =>
-    o.order_number.toLowerCase().includes(search.toLowerCase()) ||
-    o.buyer?.full_name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredOrders = orders?.filter(o => {
+    const matchesSearch = 
+      o.order_number.toLowerCase().includes(search.toLowerCase()) ||
+      o.buyer?.full_name?.toLowerCase().includes(search.toLowerCase());
+    
+    const orderDate = new Date(o.created_at);
+    const matchesDate = !dateRange?.from || (
+      orderDate >= dateRange.from && 
+      (!dateRange.to || orderDate <= dateRange.to)
+    );
+    
+    return matchesSearch && matchesDate;
+  });
 
   const {
     currentPage,
@@ -183,6 +195,12 @@ export default function AdminOrders() {
               ))}
             </SelectContent>
           </Select>
+          <DateRangePicker
+            value={dateRange}
+            onChange={setDateRange}
+            placeholder="Filter tanggal"
+            className="w-full md:w-auto"
+          />
         </div>
         <Button variant="outline" onClick={handleExport} disabled={!filteredOrders?.length}>
           <Download className="mr-2 h-4 w-4" />

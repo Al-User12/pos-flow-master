@@ -11,22 +11,34 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Eye, Users, UserCheck, Wallet, Phone, CreditCard, Building, Download } from 'lucide-react';
 import { usePagination } from '@/hooks/usePagination';
 import { DataPagination } from '@/components/shared/DataPagination';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { exportToCSV, formatCurrency as formatCurrencyUtil, formatDate } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import { DateRange } from 'react-day-picker';
 
 export default function AdminCustomers() {
   const { data: customers, isLoading } = useAdminCustomers();
   const updateCustomer = useUpdateCustomer();
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [selectedCustomer, setSelectedCustomer] = useState<typeof customers extends (infer T)[] | undefined ? T : never>(null);
 
-  const filteredCustomers = customers?.filter(customer =>
-    customer.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.phone?.includes(searchQuery) ||
-    customer.nik.includes(searchQuery)
-  );
+  const filteredCustomers = customers?.filter(customer => {
+    const matchesSearch = 
+      customer.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.phone?.includes(searchQuery) ||
+      customer.nik.includes(searchQuery);
+    
+    const customerDate = new Date(customer.created_at);
+    const matchesDate = !dateRange?.from || (
+      customerDate >= dateRange.from && 
+      (!dateRange.to || customerDate <= dateRange.to)
+    );
+    
+    return matchesSearch && matchesDate;
+  });
 
   const {
     paginatedData,
@@ -114,7 +126,7 @@ export default function AdminCustomers() {
             <CardDescription>Kelola data pelanggan dan status verifikasi</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -124,6 +136,12 @@ export default function AdminCustomers() {
                   className="pl-9"
                 />
               </div>
+              <DateRangePicker
+                value={dateRange}
+                onChange={setDateRange}
+                placeholder="Filter tanggal"
+                className="w-full md:w-auto"
+              />
               <Button variant="outline" onClick={handleExport} disabled={!filteredCustomers?.length}>
                 <Download className="mr-2 h-4 w-4" />
                 Export
