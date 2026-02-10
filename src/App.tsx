@@ -39,6 +39,7 @@ import AdminPayments from "./pages/admin/AdminPayments";
 import AdminDeliveryProofs from "./pages/admin/AdminDeliveryProofs";
 import AdminSeeder from "./pages/admin/AdminSeeder";
 import NotFound from "./pages/NotFound";
+import Install from "./pages/Install";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +97,7 @@ const App = () => (
                       </Route>
                     </Route>
                     
+                    <Route path="/install" element={<Install />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </BrowserRouter>
